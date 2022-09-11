@@ -1,54 +1,33 @@
 #ifndef INPUT_H
 #define INPUT_H
-#include <X11/Xlib.h>
-#include <X11/keysymdef.h>
-#include <X11/Xutil.h>
+
 void
-poll_events(Editor *ed) {
-#if LINUX_IMPLEMENTATION
-	while (XPending(display) > 0) 
-	{
-		XEvent event = {0};
-		XNextEvent(display, &event);
-		if (event.type == KeyPress) {
-			KeySym key = XLookupKeysym(&event.xkey, 0);
+move_cursor_right(Editor *ed)
+{
+	ed->cursor.x++;
+}
 
-			if (key == XK_K) {
-				printf("PRESSED K\n");
-			}
+void
+move_cursor_left(Editor *ed)
+{
+	ed->cursor.x--;
+}
 
-			switch(key) {
-				case XK_Escape:
-					quit = 1;
-					break;
-				case XK_j:
-					if (ed.status == NORMAL) {
-						ed->cursor.y++;
-					}
-					break;
-
-				case XK_k:
-					if (ed.status == NORMAL) {
-						if (ed->cursor.y != 0) {
-							ed->cursor.y--;
-						}
-					}
-					break;
-				case XK_l:
-					if (ed.status == NORMAL) {
-						ed->cursor.x++;
-					}
-					break;
-				case XK_h:
-					if (ed.status == NORMAL) {
-						ed->cursor.x--;
-					}
-					break;
-			}
-		}
+void
+move_cursor_up(Editor *ed)
+{
+	if (ed->cursor.y  != 0) {
+		ed->cursor.y--;
 	}
-#endif
+}
+
+void
+move_cursor_down(Buffer *b, long *line_ends, Editor *ed)
+{
+	ed->cursor.x = 0;
+	ed->cursor.y++;
+	printf("CURSOR X: %ld\n", ed->cursor.x);
+	printf("CURSOR Y: %ld\n",ed->cursor.y);
 }
 
 #endif
-

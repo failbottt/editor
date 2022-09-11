@@ -7,7 +7,7 @@
 #include <string.h>
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
-#define MIN_BUFFER_SIZE 50 
+#define MIN_BUFFER_SIZE 1024
 
 typedef struct buffer {
   uint64_t size;
@@ -30,6 +30,7 @@ new_buffer(uint64_t size)
 
 	// malloc a buffer for the text
 	b->buffer = malloc(size);
+	memset(b->buffer, 0, size);
 
 	if (!b->buffer) {
 		free(b);

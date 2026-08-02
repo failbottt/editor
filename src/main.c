@@ -22,6 +22,7 @@
 #include "keys.h"
 #include "buffer.h"
 #include "cursor.h"
+#include "term.h"
 
 /* define globally */
 editor E;
@@ -135,110 +136,135 @@ failed:
     return -1;
 }
 
-int editor_file_was_modified(void)
-{
-    return E.dirty;
-}
-
 void update_window_size(void)
 {
     if (get_window_size(STDIN_FILENO,STDOUT_FILENO,
                       &E.screenrows,&E.screencols) == -1) {
-        perror("Unable to query the screen for size (columns / rows)");
+        perror("[error] unable to query the screen for size (columns / rows)");
         exit(1);
     }
-    E.screenrows -= 2; /* Get room for status bar. */
+
+    E.screenrows -= 2;
 }
 
-void editor_draw()
+void
+editor_draw()
 {
     view *v = &E.views[0];
     buffer *b = &E.buffers[v->buffer_id];
+    int screen_row;
 
-    /* clear and home */
-    write(STDOUT_FILENO, "\x1b[H\x1b[J", 6);
+    write(STDOUT_FILENO, HIDE_CURSOR, HIDE_CURSOR_LEN);
+    write(STDOUT_FILENO, CURSOR_HOME, CURSOR_HOME_LEN);
 
-    if (b->orig_text.len > 0)
+    for (screen_row = 0; screen_row < E.screenrows; screen_row++)
     {
-        u64 i;
-        u64 rows_drawn, docs_row = 0;
-        for  (i = 0; i < b->orig_text.len; i++)
+        u64 line = v->rowoff + screen_row;
+
+        if (line >= b->lines.count)
         {
-            if (rows_drawn == E.screenrows)
+            write(STDOUT_FILENO, "~", 1);
+        }
+        else
+        {
+            u64 line_start = buffer_line_start(b, line);
+            u64 line_len = buffer_line_len(b, line);
+            u64 draw_start = v->coloff;
+            u64 draw_len = 0;
+            u64 i;
+
+            if (draw_start < line_len)
             {
-                break;
+                draw_len = line_len - draw_start;
+                if (draw_len > (u64)E.screencols)
+                {
+                    draw_len = E.screencols;
+                }
+
+                for (i = 0; i < draw_len; i++)
+                {
+                    u8 c = buffer_byte_at(b, line_start + draw_start + i);
+                    write(STDOUT_FILENO, &c, 1);
+                }
             }
-            if (b->orig_text.s[i] == '\n')
-            {
-                /* next line */
-                write(STDOUT_FILENO, "\x1b[E", 3);
-                /* clear from cursor to end */
-                write(STDOUT_FILENO, "\x1b[K", 3);
-                rows_drawn++;
-            }
-            else
-            {
-                write(STDOUT_FILENO, &b->orig_text.s[i], 1);
-            }
+        }
+
+        write(STDOUT_FILENO, CLEAR_LINE, CLEAR_LINE_LEN);
+
+        if (screen_row < E.screenrows - 1)
+        {
+            write(STDOUT_FILENO, "\r\n", 2);
         }
     }
 
-    char cur_pos[7];
-    snprintf(cur_pos, sizeof(cur_pos), "\x1b[%d;%dH", (int)v->cursor.y, (int)v->cursor.x);
-    write(STDOUT_FILENO, cur_pos, 7);
+    /* status bar */
+    write(STDOUT_FILENO, NEXT_LINE, NEXT_LINE_LEN);
+    /*write(STDOUT_FILENO, "\x1b[41m\x1b[2K", 9);*/
 
-    /* cursor top left for now */
-    /*write(STDOUT_FILENO, "\x1b[H", 3);*/
+    /* command bar */
+    write(STDOUT_FILENO, NEXT_LINE, NEXT_LINE_LEN);
+    if (E.mode == EDITOR_COMMAND_MODE)
+    {
+        write(STDOUT_FILENO, E.command.data, E.command.cur_pos);
+    }
+    else
+    {
+        write(STDOUT_FILENO, CLEAR_LINE, CLEAR_LINE_LEN);
+    }
+
+    {
+        char seq[32];
+        int cursor_row = (int)(v->cursor.y - v->rowoff) + 1;
+        int cursor_col = (int)(v->cursor.x - v->coloff) + 1;
+
+        snprintf(seq, sizeof(seq), SET_CURSOR_POS, cursor_row, cursor_col);
+        write(STDOUT_FILENO, seq, strlen(seq));
+    }
+
+    write(STDOUT_FILENO, SHOW_CURSOR, SHOW_CURSOR_LEN);
 }
 
-void handle_sigwinch(int unused __attribute__((unused))) {
+
+void handle_sigwinch(int unused __attribute__((unused)))
+{
     update_window_size();
-    /*if (E.cy > E.screenrows) E.cy = E.screenrows - 1;
-    if (E.cx > E.screencols) E.cx = E.screencols - 1;*/
     editor_draw();
 }
 
-void init_editor(void) {
+void init_editor(void)
+{
     E.mode = EDITOR_NORMAL_MODE;
-    E.numrows = 0;
-    E.dirty = 0;
-    E.filename = NULL;
-    E.syntax = NULL;
+    E.scratch = new_arena(MB(1));
+    E.command = new_arena(MB(1));
 
     buffer* buffers = (buffer*)malloc(sizeof(buffer)*32);
     if (buffers == NULL)
     {
-        perror("[init] unable to malloc buffers");
+        perror("[error] unable to allocate memory for buffers");
         exit(1);
     }
     E.buffers = buffers;
 
-    string tmp = {0};
-    s64 read = readfile("/home/failbot/src/editor/cpu.c", &tmp, MAX_FILE_SIZE);
-    if (read < 0)
-    {
-        perror("[init] unable to read file");
-        exit(errno);
-    }
+    const char* p = "/home/failbot/src/editor/data/cpu.c";
+    string path = {.s = (u8*)p, .len = strlen(p)};
+    string file;
+    readfile(p, &file, MAX_FILE_SIZE);
 
-    E.buffers[0].orig_text.len = tmp.len;
-    E.buffers[0].orig_text.s = tmp.s;
+    buffer_init(&E.buffers[0], file, path);
 
-    view* views = (view*)malloc(sizeof(view)*1);
+    view* views = (view*)malloc(sizeof(view)*32);
     if (views == NULL)
     {
-        perror("[init] unable to malloc views");
+        perror("[error] unable to allocate memory for buffers");
         exit(1);
     }
     E.views = views;
 
-    /* @cleanup */
-    view *v = &views[0];
-    v->buffer_id = 0;
-    v->cursor.x = 0;
-    v->cursor.y = 0;
-    v->rowoff = 0;
-    v->coloff = 0;
+    E.views[0].buffer_id = 0;
+    E.views[0].cursor.x = 0;
+    E.views[0].cursor.y = 0;
+    E.views[0].rowoff = 0;
+    E.views[0].coloff = 0;
 
     update_window_size();
     signal(SIGWINCH, handle_sigwinch);
@@ -252,6 +278,9 @@ int main(int argc, char **argv)
     {
         editor_draw();
         editor_process_keypress(STDIN_FILENO);
+
+        /* end of frame cleanup */
+        E.scratch.cur_pos = 0;
     }
     return 0;
 }

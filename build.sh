@@ -24,4 +24,7 @@ cc="gcc"
 target="build/fed"
 flags="${cc_sanitize} ${cc_debug} -std=c89"
 
-${cc} ${flags} -o ${target} src/main.c src/editor.c
+${cc} ${flags} -o ${target} \
+    src/main.c \
+    src/editor.c \
+    src/buffer.c

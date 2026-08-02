@@ -1,8 +1,29 @@
 #include "editor.h"
 #include "keys.h"
+#include "buffer.h"
 
-/* Read a key from the terminal put in raw mode, trying to handle
- * escape sequences. */
+static u64
+editor_cursor_offset(view *v, buffer *b)
+{
+    return buffer_line_col_to_offset(b, v->cursor.y, v->cursor.x);
+}
+
+static void
+editor_set_cursor_from_offset(view *v, buffer *b, u64 offset)
+{
+    buffer_offset_to_line_col(b, offset, &v->cursor.y, &v->cursor.x);
+}
+
+static void
+editor_clamp_cursor_x(view *v, buffer *b)
+{
+    u64 line_len = buffer_line_len(b, v->cursor.y) - 1;
+    if (v->cursor.x > line_len)
+    {
+        v->cursor.x = line_len;
+    }
+}
+
 u64
 editor_read_key(int fd)
 {
@@ -55,41 +76,62 @@ editor_read_key(int fd)
     }
 }
 
-static void
-view_scroll_to_cursor(view *v)
+static void view_scroll_to_cursor(view *v)
 {
+    if ((int)v->cursor.y < v->rowoff)
+    {
+        v->rowoff = (int)v->cursor.y;
+    }
 
+    if ((int)v->cursor.y >= v->rowoff + E.screenrows)
+    {
+        v->rowoff = (int)v->cursor.y - E.screenrows + 1;
+    }
 }
 
 void
 editor_move_cursor(u64 key)
 {
     view *v = &E.views[0];
+    buffer *b = &E.buffers[v->buffer_id];
+
     switch (key) {
         case KEY_J:
-            v->cursor.y++;
+            if (v->cursor.y + 1 < b->lines.count)
+            {
+                v->cursor.y++;
+                editor_clamp_cursor_x(v, b);
+            }
+            view_scroll_to_cursor(v);
             break;
         case KEY_K:
-            if (v->cursor.y > 0) v->cursor.y--;
+            if (v->cursor.y > 0)
+            {
+                v->cursor.y--;
+                editor_clamp_cursor_x(v, b);
+            }
+            view_scroll_to_cursor(v);
             break;
         case KEY_L:
-            v->cursor.x++;
-            break;
+            {
+                u64 line_len = buffer_line_len(b, v->cursor.y);
+                if (v->cursor.x < line_len)
+                {
+                    v->cursor.x++;
+                }
+                break;
+            }
         case KEY_H:
             if (v->cursor.x > 0) v->cursor.x--;
             break;
     }
 }
 
-/* Handle cursor position change because arrow keys were pressed. */
-/* Process events arriving from the standard input, which is, the user
- * is typing stuff on the terminal. */
 void
 editor_process_keypress(int fd) {
     int c = editor_read_key(fd);
-
-    char b[32] = "";
-    sprintf(b, "%d", c);
+    view *v = &E.views[0];
+    buffer *buf = &E.buffers[v->buffer_id];
 
     if (E.mode == EDITOR_NORMAL_MODE)
     {
@@ -99,6 +141,14 @@ editor_process_keypress(int fd) {
         case KEY_H:
         case KEY_L:
             editor_move_cursor(c);
+            break;
+        case 'i':
+            E.mode = EDITOR_INSERT_MODE;
+            break;
+        case ':':
+            E.mode = EDITOR_COMMAND_MODE;
+            u8 *colon = (u8*)":";
+            arena_push_array(&E.command, colon, 1);
             break;
         case ESC:
             exit(0);
@@ -112,12 +162,75 @@ editor_process_keypress(int fd) {
 
     if (E.mode == EDITOR_INSERT_MODE)
     {
+        u64 offset = editor_cursor_offset(v, buf);
+
+        switch (c) {
+        case ESC:
+            E.mode = EDITOR_NORMAL_MODE;
+            break;
+        case BACKSPACE:
+        case DEL_KEY:
+            if (offset > 0)
+            {
+                buffer_delete(buf, offset - 1, 1);
+                editor_set_cursor_from_offset(v, buf, offset - 1);
+                view_scroll_to_cursor(v);
+            }
+            break;
+        case ENTER:
+        case TAB:
+            {
+                /* 4 spaces */
+                u8* tab = (u8*)"    ";
+                string text = {.s = tab, .len = 4};
+                buffer_insert(buf, offset, text);
+                editor_set_cursor_from_offset(v, buf, offset + text.len);
+                view_scroll_to_cursor(v);
+                break;
+            }
+        default:
+            if (c >= 32 && c <= 126)
+            {
+                u8 ch = (u8)c;
+                string text = {.s = &ch, .len = 1};
+                buffer_insert(buf, offset, text);
+                editor_set_cursor_from_offset(v, buf, offset + 1);
+                view_scroll_to_cursor(v);
+            }
+            break;
+        }
     }
 
     if (E.mode == EDITOR_VISUAL_MODE)
     {
 
     }
+
+    if (E.mode == EDITOR_COMMAND_MODE)
+    {
+        switch (c) {
+        case ESC:
+            E.mode = EDITOR_NORMAL_MODE;
+            E.command.cur_pos = 0;
+            break;
+        case BACKSPACE:
+            if (E.command.cur_pos > 0)
+            {
+                E.command.cur_pos--;
+            }
+            break;
+        case ENTER:
+            {
+                /* process */
+                break;
+            }
+        default:
+            if (c >= 32 && c <= 126)
+            {
+                u8 ch = (u8)c;
+                arena_push_array(&E.command, &ch, 1);
+            }
+            break;
+        }
+    }
 }
-
-

@@ -127,5 +127,58 @@ fail:
     }
 }
 
+/* arena */
+#include <stdlib.h>
+#include <string.h>
+
+typedef struct
+{
+    u64 cap;
+    u64 cur_pos;
+    u8* data;
+} arena;
+
+static arena
+new_arena(u64 size)
+{
+
+    u8* data = (u8*)malloc(sizeof(u8)*size);
+    if (data == NULL)
+    {
+        perror("[error] unable to malloc for new arena");
+        exit(1);
+    }
+
+    arena r = {0};
+    r.cap = size;
+    r.cur_pos = 0;
+    r.data = data;
+
+    return r;
+}
+
+static void
+arena_push_array(arena *arena, u8* data, u64 len)
+{
+    if (len + arena->cur_pos >= arena->cap)
+    {
+        u64 new_cap = arena->cap * 2;
+        u8 *new_buffer = (u8*)malloc((sizeof(u8) * new_cap));
+        if (new_buffer == NULL)
+        {
+            perror("[error] unable to increase arena size");
+            exit(1);
+        }
+
+        memcpy(new_buffer, arena->data, arena->cur_pos);
+        arena->data = new_buffer;
+        arena->cap = new_cap;
+        free(arena->data);
+    }
+
+    memcpy(arena->data + arena->cur_pos, data, len);
+    arena->cur_pos += len;
+}
+
 
 #endif

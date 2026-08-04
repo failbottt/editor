@@ -21,6 +21,10 @@ typedef struct
     u8* s;
 } string;
 
+/* defines */
+#define TRUE 1;
+#define FALSE 0;
+
 /* macros */
 #define KB(x) (x << 10)
 #define MB(x) (x << 20)

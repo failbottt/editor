@@ -22,9 +22,18 @@
 #define SHOW_CURSOR            "\x1b[?25h"
 #define SHOW_CURSOR_LEN         6
 
+#define ENTER_ALT_SCREEN       "\x1b[?1049h"
+#define ENTER_ALT_SCREEN_LEN    8
+
+#define LEAVE_ALT_SCREEN       "\x1b[?1049l"
+#define LEAVE_ALT_SCREEN_LEN    8
+
 #define NEXT_LINE               "\x1b[E"
 #define NEXT_LINE_LEN           3
 
 #define SET_CURSOR_POS          "\x1b[%d;%dH"
+
+void terminal_enter_alt_screen();
+void terminal_exit_alt_screen();
 
 #endif

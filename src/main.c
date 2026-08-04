@@ -29,20 +29,45 @@ editor E;
 
 static struct termios orig_termios; /* In order to restore at exit.*/
 
+void editor_at_exit(void);
+void handle_sigwinch(int unused __attribute__((unused)));
+
+static void handle_termination_signal(int signum) {
+    editor_at_exit();
+    signal(signum, SIG_DFL);
+    raise(signum);
+}
+
+static void install_signal_handlers(void) {
+    int signals[] = {SIGINT, SIGTERM, SIGHUP, SIGQUIT};
+    struct sigaction sa;
+    size_t i;
+
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = handle_termination_signal;
+    sigemptyset(&sa.sa_mask);
+
+    for (i = 0; i < sizeof(signals) / sizeof(signals[0]); i++) {
+        sigaction(signals[i], &sa, NULL);
+    }
+
+    signal(SIGWINCH, handle_sigwinch);
+}
+
 void disable_raw_mode(int fd) {
-    /* Don't even check the return value as it's too latE. */
     if (E.rawmode) {
         tcsetattr(fd,TCSAFLUSH,&orig_termios);
         E.rawmode = 0;
     }
 }
 
-/* Called at exit to avoid remaining in raw modE. */
-void editor_at_exit(void) {
+void editor_at_exit(void)
+{
+    write(STDOUT_FILENO, SHOW_CURSOR, SHOW_CURSOR_LEN);
+    terminal_exit_alt_screen();
     disable_raw_mode(STDIN_FILENO);
 }
 
-/* Raw mode: 1960 magic shit. */
 int enable_raw_mode(int fd) {
     struct termios raw;
 
@@ -203,9 +228,12 @@ editor_draw()
 
     /* command bar */
     write(STDOUT_FILENO, NEXT_LINE, NEXT_LINE_LEN);
-    if (E.mode == EDITOR_COMMAND_MODE)
+    if (E.mode == EDITOR_COMMAND_MODE && E.cmd.cur_pos > 0)
     {
-        write(STDOUT_FILENO, E.command.data, E.command.cur_pos);
+        write(STDOUT_FILENO, CLEAR_LINE, CLEAR_LINE_LEN);
+        write(STDOUT_FILENO, E.cmd.data, E.cmd.cur_pos);
+        write(STDOUT_FILENO, SHOW_CURSOR, SHOW_CURSOR_LEN);
+        return;
     }
     else
     {
@@ -234,8 +262,10 @@ void handle_sigwinch(int unused __attribute__((unused)))
 void init_editor(void)
 {
     E.mode = EDITOR_NORMAL_MODE;
+    E.running = 1;
+    E.alt_screen = 0;
     E.scratch = new_arena(MB(1));
-    E.command = new_arena(MB(1));
+    E.cmd = new_arena(MB(1));
 
     buffer* buffers = (buffer*)malloc(sizeof(buffer)*32);
     if (buffers == NULL)
@@ -267,14 +297,17 @@ void init_editor(void)
     E.views[0].coloff = 0;
 
     update_window_size();
-    signal(SIGWINCH, handle_sigwinch);
+    install_signal_handlers();
 }
 
 int main(int argc, char **argv)
 {
     init_editor();
+
+    terminal_enter_alt_screen();
     enable_raw_mode(STDIN_FILENO);
-    while(1)
+
+    while(E.running)
     {
         editor_draw();
         editor_process_keypress(STDIN_FILENO);
@@ -282,5 +315,8 @@ int main(int argc, char **argv)
         /* end of frame cleanup */
         E.scratch.cur_pos = 0;
     }
+
+    /* cleanup / shutdown */
+
     return 0;
 }

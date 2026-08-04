@@ -14,9 +14,11 @@
 
 typedef struct {
     int mode;
+    int running;
     int screenrows;
     int screencols;
     int rawmode;
+    int alt_screen;
 
     buffer* buffers;
     view* views;
@@ -24,7 +26,7 @@ typedef struct {
     arena scratch;
 
     /* @cleanup */
-    arena command;
+    arena cmd;
 } editor;
 
 extern editor E;

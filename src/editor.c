@@ -1,6 +1,7 @@
 #include "editor.h"
 #include "keys.h"
 #include "buffer.h"
+#include "cmd.h"
 
 static u64
 editor_cursor_offset(view *v, buffer *b)
@@ -148,7 +149,7 @@ editor_process_keypress(int fd) {
         case ':':
             E.mode = EDITOR_COMMAND_MODE;
             u8 *colon = (u8*)":";
-            arena_push_array(&E.command, colon, 1);
+            arena_push_array(&E.cmd, colon, 1);
             break;
         case ESC:
             exit(0);
@@ -177,7 +178,6 @@ editor_process_keypress(int fd) {
                 view_scroll_to_cursor(v);
             }
             break;
-        case ENTER:
         case TAB:
             {
                 /* 4 spaces */
@@ -186,6 +186,10 @@ editor_process_keypress(int fd) {
                 buffer_insert(buf, offset, text);
                 editor_set_cursor_from_offset(v, buf, offset + text.len);
                 view_scroll_to_cursor(v);
+                break;
+            }
+        case ENTER:
+            {
                 break;
             }
         default:
@@ -211,24 +215,24 @@ editor_process_keypress(int fd) {
         switch (c) {
         case ESC:
             E.mode = EDITOR_NORMAL_MODE;
-            E.command.cur_pos = 0;
+            E.cmd.cur_pos = 0;
             break;
         case BACKSPACE:
-            if (E.command.cur_pos > 0)
+            if (E.cmd.cur_pos > 0)
             {
-                E.command.cur_pos--;
+                E.cmd.cur_pos--;
             }
             break;
         case ENTER:
             {
-                /* process */
+                process_cmd(E.cmd);
                 break;
             }
         default:
             if (c >= 32 && c <= 126)
             {
                 u8 ch = (u8)c;
-                arena_push_array(&E.command, &ch, 1);
+                arena_push_array(&E.cmd, &ch, 1);
             }
             break;
         }

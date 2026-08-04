@@ -3,5 +3,5 @@
 
 #include "base.h"
 
-void process_cmd(arena cmd);
+void cmd_process(arena *cmd);
 #endif

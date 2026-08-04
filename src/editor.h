@@ -34,4 +34,5 @@ extern editor E;
 void editor_process_keypress(int fd);
 void editor_move_cursor(u64 c);
 u64 editor_read_key(int fd);
+void editor_set_cmd_status_message(u8 *msg);
 #endif

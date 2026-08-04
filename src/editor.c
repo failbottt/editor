@@ -8,7 +8,6 @@ editor_cursor_offset(view *v, buffer *b)
 {
     return buffer_line_col_to_offset(b, v->cursor.y, v->cursor.x);
 }
-
 static void
 editor_set_cursor_from_offset(view *v, buffer *b, u64 offset)
 {
@@ -225,7 +224,7 @@ editor_process_keypress(int fd) {
             break;
         case ENTER:
             {
-                process_cmd(E.cmd);
+                cmd_process(&E.cmd);
                 break;
             }
         default:
@@ -237,4 +236,9 @@ editor_process_keypress(int fd) {
             break;
         }
     }
+}
+
+void editor_set_cmd_status_message(u8 *msg)
+{
+    return;
 }

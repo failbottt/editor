@@ -2,35 +2,58 @@
 #include "cmd.h"
 #include "editor.h"
 
-void process_cmd(arena cmd)
+void cmd_process(arena *cmd)
 {
-    if (cmd.data[0] != ':')
+    if (cmd == NULL || cmd->data == NULL)
     {
         return;
     }
 
-    if (cmd.data[1] == 'q')
+    if (cmd->cur_pos == 0)
     {
-        u8 has_trailing = FALSE;
-        int i = 2;
-        while (i < cmd.cur_pos)
+        return;
+    }
+
+    /* enter with only colon */
+    if (cmd->cur_pos == 1 && cmd->data[0] == ':')
+    {
+        cmd->cur_pos = 0;
+        E.mode = EDITOR_NORMAL_MODE;
+        return;
+    }
+
+    /* Skip the leading ':' and parse the command before clearing it. */
+    u64 i = 1;
+
+    while (i < cmd->cur_pos && (cmd->data[i] == ' ' || cmd->data[i] == '\t'))
+    {
+        i++;
+    }
+
+    if (i < cmd->cur_pos && cmd->data[i] == 'q')
+    {
+        i++;
+
+        while (i < cmd->cur_pos && (cmd->data[i] == ' ' || cmd->data[i] == '\t'))
         {
-            if (cmd.data[i] == ' ')
-            {
-                i++;
-                continue;
-            }
-            has_trailing = TRUE;
-            break;
+            i++;
         }
 
-        if (has_trailing)
+        if (i == cmd->cur_pos)
         {
-            E.running = 0;
+            cmd->cur_pos = 0;
+            E.mode = EDITOR_NORMAL_MODE;
+            E.running = FALSE;
+            return;
         }
-        else
-        {
-            /* write status line about trailing text after quit command */
-        }
+
+        editor_set_cmd_status_message((u8*)"Trailing characters on quit");
     }
+    else
+    {
+        editor_set_cmd_status_message((u8*)"Unknown command");
+    }
+
+    cmd->cur_pos = 0;
+    E.mode = EDITOR_NORMAL_MODE;
 }

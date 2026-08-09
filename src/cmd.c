@@ -49,6 +49,10 @@ void cmd_process(arena *cmd)
 
         editor_set_cmd_status_message((u8*)"Trailing characters on quit");
     }
+    else if (i < cmd->cur_pos && cmd->data[i] == 'w')
+    {
+        editor_save_file(editor_active_buffer());
+    }
     else
     {
         editor_set_cmd_status_message((u8*)"Unknown command");

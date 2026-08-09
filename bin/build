@@ -1,6 +1,17 @@
 #!/bin/bash
 
+cc="gcc"
+
 for arg in "$@"; do declare $arg='1';done
+
+if [[ "${test:-0}" == "1" ]]; then
+    echo "[building tests]"
+    cc_debug="-g"
+    target="build/tests"
+    flags="${cc_debug} -std=c89"
+    ${cc} ${flags} -o ${target} ./tests/main.c
+    exit
+fi
 
 if [[ ! -d "./build" ]]; then
     mkdir ./build
@@ -20,8 +31,7 @@ if [[ "${debug:-0}" == "1" ]]; then
     cc_debug="-g"
 fi
 
-cc="gcc"
-target="build/fed"
+target="build/editor"
 flags="${cc_sanitize} ${cc_debug} -std=c89"
 
 ${cc} ${flags} -o ${target} \

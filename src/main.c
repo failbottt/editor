@@ -175,8 +175,8 @@ void update_window_size(void)
 void
 editor_draw()
 {
-    view *v = &E.views[0];
-    buffer *b = &E.buffers[v->buffer_id];
+    view* v = &E.views[0];
+    buffer *b = editor_active_buffer();
     int screen_row;
 
     write(STDOUT_FILENO, HIDE_CURSOR, HIDE_CURSOR_LEN);

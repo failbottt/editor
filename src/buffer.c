@@ -592,3 +592,57 @@ buffer_line_col_to_offset(buffer *b, u64 line, u64 col)
 
     return start + col;
 }
+
+string buffer_to_string(buffer *b)
+{
+    u64 len = 0;
+    int i;
+    string r = {0};
+
+    if (b == NULL)
+    {
+        return (string){0};
+    }
+
+    for (i = 0; i < b->pieces.count; i++)
+    {
+        len += b->pieces.items[i].len;
+    }
+
+    int idx = 0;
+    u8* s = malloc(sizeof(u8)*len);
+
+    ASSERT(s != NULL);
+
+    for (i = 0; i < b->pieces.count; i++)
+    {
+
+        piece p = b->pieces.items[i];
+
+        ASSERT(
+                p.source == BUFFER_SRC_ORIG ||
+                p.source == BUFFER_SRC_ADD
+                );
+
+        u8* src;
+
+        if (p.source == BUFFER_SRC_ORIG)
+        {
+            src = b->orig.s;
+        }
+        else if (p.source == BUFFER_SRC_ADD)
+        {
+            src = b->add.s;
+        }
+
+        /* @cleanup: src + p.start could be longer thn */
+        strncpy((char*)s+idx, (char*)src + p.start, p.len);
+
+        idx += p.len;
+    }
+
+    r.s = s;
+    r.len = idx;
+
+    return r;
+}

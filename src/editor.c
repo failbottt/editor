@@ -151,7 +151,6 @@ editor_process_keypress(int fd) {
             arena_push_array(&E.cmd, colon, 1);
             break;
         case ESC:
-            exit(0);
             break;
         default:
             break;
@@ -241,4 +240,20 @@ editor_process_keypress(int fd) {
 void editor_set_cmd_status_message(u8 *msg)
 {
     return;
+}
+
+buffer* editor_active_buffer()
+{
+    view *v = &E.views[0];
+    return &E.buffers[v->buffer_id];
+}
+
+u64 editor_save_file(buffer *b)
+{
+    string s = buffer_to_string(b);
+
+    fprintf(stderr, "!!!! %s !!!!\n", s.s);
+    exit(1);
+
+    return 0;
 }

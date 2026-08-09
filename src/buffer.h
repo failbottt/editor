@@ -63,7 +63,9 @@ u64 buffer_line_start(buffer *b, u64 line);
 u64 buffer_line_len(buffer *b, u64 line);
 u64 buffer_offset_to_line_col(buffer *b, u64 offset, u64 *line, u64 *col);
 u64 buffer_line_col_to_offset(buffer *b, u64 line, u64 col);
-/*buffer_iter_range(...)*/
+string buffer_to_string(buffer *b);
+
+
 
 
 #endif

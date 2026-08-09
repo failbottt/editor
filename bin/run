@@ -1,0 +1,16 @@
+#!/bin/sh
+
+./build.sh debug asan
+
+if [ -a asan.log ]; then
+    rm asan.log
+fi
+
+./build/editor 2> asan.log
+
+# figure out how to only open if the output contains
+# asan stuff because if I write to stderr myself
+# I don't want to open the file.
+if [ -a asan.log ]; then
+    $EDITOR asan.log
+fi

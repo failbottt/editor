@@ -30,6 +30,17 @@ typedef struct
 #define MB(x) (x << 20)
 #define GB(x) (x << 30)
 
+#define ASSERT(cond)                         \
+    do {                                          \
+        if (!(cond)) {                            \
+            fprintf(stderr,                       \
+                    "%s:%d: assertion `%s' failed\n", \
+                    __FILE__, __LINE__, #cond); \
+            fprintf(stderr, "\n");                 \
+            abort();                              \
+        }                                         \
+    } while (0)
+
 /* file */
 
 /* @cleanup: clanked */

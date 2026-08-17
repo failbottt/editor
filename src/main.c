@@ -223,8 +223,11 @@ editor_draw()
     }
 
     /* status bar */
+    write(STDOUT_FILENO, "\x1b[47;30m", 8); /* white bg, black fg */
     write(STDOUT_FILENO, NEXT_LINE, NEXT_LINE_LEN);
-    /*write(STDOUT_FILENO, "\x1b[41m\x1b[2K", 9);*/
+    write(STDOUT_FILENO, CLEAR_LINE, CLEAR_LINE_LEN);
+    write(STDOUT_FILENO, b->file_path.s, b->file_path.len);
+    write(STDOUT_FILENO, "\x1b[0m", 4);
 
     /* command bar */
     write(STDOUT_FILENO, NEXT_LINE, NEXT_LINE_LEN);
@@ -234,6 +237,10 @@ editor_draw()
         write(STDOUT_FILENO, E.cmd.data, E.cmd.cur_pos);
         write(STDOUT_FILENO, SHOW_CURSOR, SHOW_CURSOR_LEN);
         return;
+    }
+    else if (E.status_message[0] != '\0')
+    {
+        write(STDOUT_FILENO, E.status_message, strlen((char *)E.status_message));
     }
     else
     {
@@ -266,6 +273,7 @@ void init_editor(void)
     E.alt_screen = 0;
     E.scratch = new_arena(MB(1));
     E.cmd = new_arena(MB(1));
+    E.status_message[0] = '\0';
 
     buffer* buffers = (buffer*)malloc(sizeof(buffer)*32);
     if (buffers == NULL)

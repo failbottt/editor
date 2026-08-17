@@ -239,21 +239,26 @@ editor_process_keypress(int fd) {
 
 void editor_set_cmd_status_message(u8 *msg)
 {
-    return;
+    size_t len;
+
+    if (msg == NULL)
+    {
+        E.status_message[0] = '\0';
+        return;
+    }
+
+    len = strlen((char *)msg);
+    if (len >= sizeof(E.status_message))
+    {
+        len = sizeof(E.status_message) - 1;
+    }
+
+    memcpy(E.status_message, msg, len);
+    E.status_message[len] = '\0';
 }
 
 buffer* editor_active_buffer()
 {
     view *v = &E.views[0];
     return &E.buffers[v->buffer_id];
-}
-
-u64 editor_save_file(buffer *b)
-{
-    string s = buffer_to_string(b);
-
-    fprintf(stderr, "!!!! %s !!!!\n", s.s);
-    exit(1);
-
-    return 0;
 }

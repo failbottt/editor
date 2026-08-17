@@ -39,4 +39,5 @@ ${cc} ${flags} -o ${target} \
     src/editor.c \
     src/buffer.c \
     src/cmd.c \
-    src/term.c
+    src/term.c \
+    src/file.c

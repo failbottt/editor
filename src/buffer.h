@@ -44,6 +44,8 @@ typedef struct
 typedef struct
 {
     string file_path;
+    struct stat file_stat;
+    int has_file_stat;
 
     string orig;
     string add;

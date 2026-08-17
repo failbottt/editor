@@ -312,17 +312,55 @@ piece_array_insert(piece_array* a, u64 idx, piece p)
     a->count++;
 }
 
+static int
+buffer_copy_path_cstr(string path, char **out)
+{
+    char *c_path;
+
+    if (path.s == NULL || path.len == 0)
+    {
+        *out = NULL;
+        return 0;
+    }
+
+    c_path = (char *)malloc((size_t)path.len + 1);
+    if (c_path == NULL)
+    {
+        perror("[error] unable to allocate path copy");
+        return -1;
+    }
+
+    memcpy(c_path, path.s, (size_t)path.len);
+    c_path[path.len] = '\0';
+    *out = c_path;
+    return 0;
+}
+
 void
 buffer_init(buffer *b, string data, string path)
 {
+    char *c_path;
+    struct stat st;
+
     b->file_path = path;
     b->orig = data;
     b->add = (string){0};
     b->add_capacity = 0;
+    b->has_file_stat = 0;
     b->lines.items = NULL;
     b->lines.count = 0;
     b->lines.capacity = 0;
     b->total_len = data.len;
+
+    if (buffer_copy_path_cstr(path, &c_path) == 0 && c_path != NULL)
+    {
+        if (stat(c_path, &st) == 0)
+        {
+            b->file_stat = st;
+            b->has_file_stat = 1;
+        }
+        free(c_path);
+    }
 
     u64 piece_capacity = 64;
     piece* pieces = (piece*)malloc(sizeof(piece) * piece_capacity);
@@ -596,8 +634,10 @@ buffer_line_col_to_offset(buffer *b, u64 line, u64 col)
 string buffer_to_string(buffer *b)
 {
     u64 len = 0;
-    int i;
+    u64 i;
+    u64 idx = 0;
     string r = {0};
+    u8 *s;
 
     if (b == NULL)
     {
@@ -609,8 +649,7 @@ string buffer_to_string(buffer *b)
         len += b->pieces.items[i].len;
     }
 
-    int idx = 0;
-    u8* s = malloc(sizeof(u8)*len);
+    s = (u8 *)malloc(len == 0 ? 1 : (size_t)len);
 
     ASSERT(s != NULL);
 
@@ -635,8 +674,7 @@ string buffer_to_string(buffer *b)
             src = b->add.s;
         }
 
-        /* @cleanup: src + p.start could be longer thn */
-        strncpy((char*)s+idx, (char*)src + p.start, p.len);
+        memcpy(s + idx, src + p.start, (size_t)p.len);
 
         idx += p.len;
     }

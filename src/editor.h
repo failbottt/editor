@@ -27,6 +27,7 @@ typedef struct {
 
     /* @cleanup */
     arena cmd;
+    u8 status_message[256];
 } editor;
 
 extern editor E;
@@ -36,5 +37,4 @@ void editor_move_cursor(u64 c);
 u64 editor_read_key(int fd);
 void editor_set_cmd_status_message(u8 *msg);
 buffer* editor_active_buffer();
-u64 editor_save_file(buffer* b);
 #endif

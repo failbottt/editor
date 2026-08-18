@@ -2,17 +2,6 @@
 #define _POSIX_C_SOURCE 200809L
 #endif
 
-#include <termios.h>
-#include <stdint.h>
-#include <sys/types.h>
-#include <sys/ioctl.h>
-#include <sys/time.h>
-#include <unistd.h>
-#include <stdarg.h>
-#include <fcntl.h>
-#include <X11/keysym.h>
-
-#include "base.h"
 #include "editor.h"
 #include "term.h"
 

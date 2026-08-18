@@ -15,14 +15,14 @@
 #define EDITOR_SEARCH_MODE 6
 
 typedef struct {
-    int mode;
-    int running;
-    int screenrows;
-    int screencols;
-    int rawmode;
-    int alt_screen;
-    int pending_op;
-    int pending_op_stage;
+    u64 mode;
+    u64 running;
+    u64 screenrows;
+    u64 screencols;
+    u64 rawmode;
+    u64 alt_screen;
+    u64 pending_op;
+    u64 pending_op_stage;
 
     buffer* buffers;
     view* views;

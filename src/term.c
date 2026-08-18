@@ -1,8 +1,11 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
 #include <sys/ioctl.h>
 #include <termios.h>
+
 
 #include "term.h"
 #include "editor.h"
@@ -41,7 +44,8 @@ void
 term_update_window_size()
 {
     u64 ws = term_get_window_size(
-            STDIN_FILENO,STDOUT_FILENO,
+            STDIN_FILENO,
+            STDOUT_FILENO,
             &E.screenrows,
             &E.screencols
             );

@@ -1,4 +1,29 @@
-- splits
-- undo/redo
+# now
+---
+
+- yank/paste
+- yank from cursor
+- yank line
+- delete from cursor
+- clear from cursor
+- replace (r)
+- visual select
+- visual block selection
 - search
 - search / replace
+- splits
+- undo/redo
+- jump list forward/backward
+- find instances of word under cursor (*)
+- find matching brace/paren/bracket
+
+# soon
+---
+- project wide search
+- fuzzy file finding
+
+# later
+# ---
+- macros
+- lsp
+- syntax highlighting (??)

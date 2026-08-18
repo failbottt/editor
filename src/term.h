@@ -1,6 +1,19 @@
 #ifndef TERM_H
 #define TERM_H
 
+#include "base.h"
+
+u64  term_enable_raw_mode(int fd);
+u64  term_get_cursor_position(u64 ifd, u64 ofd, u64 *rows, u64 *cols);
+u64  term_get_window_size(u64 ifd, u64 ofd, u64 *rows, u64 *cols);
+void term_enter_alt_screen();
+void term_exit_alt_screen();
+void term_disable_raw_mode(u64 fd);
+void term_handle_sigwinch(int unused __attribute__((unused)));
+void term_handle_termination_signal(int signum);
+void term_install_signal_handlers();
+void term_update_window_size();
+
 #define CURSOR_HOME            "\x1b[H"
 #define CURSOR_HOME_LEN        3
 
@@ -42,7 +55,5 @@
 #define CURSOR_LINE_BG          "\x1b[48;5;235m"
 #define CURSOR_LINE_BG_LEN      11
 
-void terminal_enter_alt_screen();
-void terminal_exit_alt_screen();
 
 #endif

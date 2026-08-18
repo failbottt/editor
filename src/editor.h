@@ -39,9 +39,13 @@ extern editor E;
 
 #define TAB (string){.s = (u8*)"    ", .len = 4}
 
+u64 editor_read_key(int fd);
 void editor_process_keypress(int c);
 void editor_move_cursor(u64 c);
-u64 editor_read_key(int fd);
 void editor_set_cmd_status_message(u8 *msg);
 buffer* editor_active_buffer();
+void editor_at_exit();
+void editor_draw();
+void editor_init();
+
 #endif

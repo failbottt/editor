@@ -16,11 +16,13 @@
 - jump list forward/backward
 - find instances of word under cursor (*)
 - find matching brace/paren/bracket
+- `:q` if multiple splits open (just close focused split)
 
 # soon
 ---
 - project wide search
 - fuzzy file finding
+- file-browser
 
 # later
 # ---

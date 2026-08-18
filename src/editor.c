@@ -3,6 +3,7 @@
 #include "buffer.h"
 #include "cmd.h"
 #include "base.h"
+#include "term.h"
 
 static u64
 editor_cursor_offset(view *v, buffer *b)
@@ -417,7 +418,7 @@ editor_process_keypress(int c) {
 
     /* @cleanup: hardcoded */
     view *v = &E.views[0];
-    buffer *buf = &E.buffers[v->buffer_id];
+    buffer *b = &E.buffers[v->buffer_id];
 
     if (E.mode == EDITOR_NORMAL_MODE)
     {
@@ -425,42 +426,42 @@ editor_process_keypress(int c) {
         case 'A':
             {
                 u64 line = v->cursor.y;
-                u64 insert_off = buffer_line_start(buf, line) + buffer_line_len(buf, line);
+                u64 insert_off = buffer_line_start(b, line) + buffer_line_len(b, line);
                 E.mode = EDITOR_INSERT_MODE;
-                editor_set_cursor_from_offset(v, buf, insert_off);
+                editor_set_cursor_from_offset(v, b, insert_off);
                 break;
             }
         case 'a':
             {
-                u64 line_len = buffer_line_len(buf, v->cursor.y);
-                editor_set_cursor_from_offset(v, buf, v->cursor.x + 1);
+                u64 line_len = buffer_line_len(b, v->cursor.y);
+                editor_set_cursor_from_offset(v, b, v->cursor.x + 1);
                 E.mode = EDITOR_INSERT_MODE;
                 break;
             }
         case 'b':
             {
-                u64 offset = editor_cursor_offset(v, buf);
-                offset = editor_skip_word_backward(buf, offset);
-                editor_set_cursor_from_offset(v, buf, offset);
+                u64 offset = editor_cursor_offset(v, b);
+                offset = editor_skip_word_backward(b, offset);
+                editor_set_cursor_from_offset(v, b, offset);
                 view_scroll_to_cursor(v);
                 break;
             }
         case 'J':
             {
                 u64 line = v->cursor.y;
-                u64 prev_cursor = editor_cursor_offset(v, buf);
+                u64 prev_cursor = editor_cursor_offset(v, b);
                 u64 join_off;
                 string space = {.s = (u8*)" ", .len = 1};
 
-                if (line + 1 >= buf->lines.count)
+                if (line + 1 >= b->lines.count)
                 {
                     break;
                 }
 
-                join_off = buffer_line_start(buf, line) + buffer_line_len(buf, line);
-                buffer_delete(buf, join_off, buffer_line_start(buf, line + 1) - join_off);
-                buffer_insert(buf, join_off, space);
-                editor_set_cursor_from_offset(v, buf, prev_cursor);
+                join_off = buffer_line_start(b, line) + buffer_line_len(b, line);
+                buffer_delete(b, join_off, buffer_line_start(b, line + 1) - join_off);
+                buffer_insert(b, join_off, space);
+                editor_set_cursor_from_offset(v, b, prev_cursor);
                 view_scroll_to_cursor(v);
                 break;
             }
@@ -491,18 +492,18 @@ editor_process_keypress(int c) {
             }
         case 'w':
             {
-                u64 offset = editor_cursor_offset(v, buf);
-                offset = editor_skip_word_forward(buf, offset);
-                editor_set_cursor_from_offset(v, buf, offset);
+                u64 offset = editor_cursor_offset(v, b);
+                offset = editor_skip_word_forward(b, offset);
+                editor_set_cursor_from_offset(v, b, offset);
                 view_scroll_to_cursor(v);
                 break;
             }
         case 'e':
             {
-                u64 offset = editor_cursor_offset(v, buf);
+                u64 offset = editor_cursor_offset(v, b);
 
-                offset = editor_skip_word_end(buf, offset);
-                editor_set_cursor_from_offset(v, buf, offset);
+                offset = editor_skip_word_end(b, offset);
+                editor_set_cursor_from_offset(v, b, offset);
                 view_scroll_to_cursor(v);
                 break;
             }
@@ -513,10 +514,10 @@ editor_process_keypress(int c) {
             }
         case 'I':
             {
-                u64 insert_off = editor_line_first_nonblank_offset(buf, v->cursor.y);
+                u64 insert_off = editor_line_first_nonblank_offset(b, v->cursor.y);
 
                 E.mode = EDITOR_INSERT_MODE;
-                editor_set_cursor_from_offset(v, buf, insert_off);
+                editor_set_cursor_from_offset(v, b, insert_off);
                 view_scroll_to_cursor(v);
                 break;
             }
@@ -524,12 +525,12 @@ editor_process_keypress(int c) {
             {
                 u64 line = v->cursor.y - 1;
                 u64 insert_off =
-                    buffer_line_start(buf, line) + buffer_line_len(buf, line);
+                    buffer_line_start(b, line) + buffer_line_len(b, line);
                 string nl = {.s = (u8*)"\n", .len = 1};
-                buffer_insert(buf, insert_off, nl);
+                buffer_insert(b, insert_off, nl);
 
                 E.mode = EDITOR_INSERT_MODE;
-                editor_set_cursor_from_offset(v, buf, insert_off + 1);
+                editor_set_cursor_from_offset(v, b, insert_off + 1);
                 view_scroll_to_cursor(v);
                 break;
             }
@@ -537,12 +538,12 @@ editor_process_keypress(int c) {
             {
                 u64 line = v->cursor.y;
                 u64 insert_off =
-                    buffer_line_start(buf, line) + buffer_line_len(buf, line);
+                    buffer_line_start(b, line) + buffer_line_len(b, line);
                 string nl = {.s = (u8*)"\n", .len = 1};
-                buffer_insert(buf, insert_off, nl);
+                buffer_insert(b, insert_off, nl);
 
                 E.mode = EDITOR_INSERT_MODE;
-                editor_set_cursor_from_offset(v, buf, insert_off + 1);
+                editor_set_cursor_from_offset(v, b, insert_off + 1);
                 view_scroll_to_cursor(v);
                 break;
             }
@@ -558,7 +559,7 @@ editor_process_keypress(int c) {
             }
         case 'G':
             {
-                editor_set_cursor_from_offset(v, buf, buf->total_len - 1);
+                editor_set_cursor_from_offset(v, b, b->total_len - 1);
                 view_scroll_to_cursor(v);
                 break;
             }
@@ -566,12 +567,12 @@ editor_process_keypress(int c) {
             {
                 u64 max_rowoff = 0;
 
-                if (buf->lines.count > (u64)E.screenrows)
+                if (b->lines.count > (u64)E.screenrows)
                 {
-                    max_rowoff = buf->lines.count - E.screenrows;
+                    max_rowoff = b->lines.count - E.screenrows;
                 }
 
-                if ((u64)v->rowoff + E.screenrows < buf->lines.count)
+                if ((u64)v->rowoff + E.screenrows < b->lines.count)
                 {
                     v->rowoff += E.screenrows;
                     if ((u64)v->rowoff > max_rowoff)
@@ -585,7 +586,7 @@ editor_process_keypress(int c) {
                 }
 
                 v->cursor.y = (u64)v->rowoff;
-                editor_clamp_cursor_x(v, buf);
+                editor_clamp_cursor_x(v, b);
                 break;
 
             }
@@ -604,12 +605,12 @@ editor_process_keypress(int c) {
                 }
 
                 v->cursor.y = (u64)(v->rowoff + E.screenrows - 1);
-                if (v->cursor.y >= buf->lines.count)
+                if (v->cursor.y >= b->lines.count)
                 {
-                    v->cursor.y = buf->lines.count - 1;
+                    v->cursor.y = b->lines.count - 1;
                 }
 
-                editor_clamp_cursor_x(v, buf);
+                editor_clamp_cursor_x(v, b);
                 break;
             }
         case ESC:
@@ -623,7 +624,7 @@ editor_process_keypress(int c) {
 
     if (E.mode == EDITOR_INSERT_MODE)
     {
-        u64 offset = editor_cursor_offset(v, buf);
+        u64 offset = editor_cursor_offset(v, b);
 
         switch (c) {
         case ESC:
@@ -633,16 +634,16 @@ editor_process_keypress(int c) {
         case DEL_KEY:
             if (offset > 0)
             {
-                buffer_delete(buf, offset - 1, 1);
-                editor_set_cursor_from_offset(v, buf, offset - 1);
+                buffer_delete(b, offset - 1, 1);
+                editor_set_cursor_from_offset(v, b, offset - 1);
                 view_scroll_to_cursor(v);
             }
             break;
         case KEY_TAB:
             {
                 /* @cleanup: backspace is 4 */
-                buffer_insert(buf, offset, TAB);
-                editor_set_cursor_from_offset(v, buf, offset + TAB.len);
+                buffer_insert(b, offset, TAB);
+                editor_set_cursor_from_offset(v, b, offset + TAB.len);
                 view_scroll_to_cursor(v);
                 break;
             }
@@ -655,8 +656,8 @@ editor_process_keypress(int c) {
             {
                 u8 ch = (u8)c;
                 string text = {.s = &ch, .len = 1};
-                buffer_insert(buf, offset, text);
-                editor_set_cursor_from_offset(v, buf, offset + 1);
+                buffer_insert(b, offset, text);
+                editor_set_cursor_from_offset(v, b, offset + 1);
                 view_scroll_to_cursor(v);
             }
             break;
@@ -680,6 +681,11 @@ editor_process_keypress(int c) {
                 E.pending_op_stage = 1;
                 return;
             }
+            else if (c == 'w')
+            {
+
+            }
+
             editor_clear_pending_op();
             return;
         }
@@ -695,13 +701,13 @@ editor_process_keypress(int c) {
                 }
                 else if (c == 'w')
                 {
-                    editor_range range = editor_inner_word_range(buf, editor_cursor_offset(v, buf));
+                    editor_range range = editor_inner_word_range(b, editor_cursor_offset(v, b));
 
                     if (range.end > range.start)
                     {
-                        buffer_delete(buf, range.start, range.end - range.start);
-                        editor_set_cursor_from_offset(v, buf, range.start);
-                        editor_clamp_cursor_x(v, buf);
+                        buffer_delete(b, range.start, range.end - range.start);
+                        editor_set_cursor_from_offset(v, b, range.start);
+                        editor_clamp_cursor_x(v, b);
                         view_scroll_to_cursor(v);
                     }
 
@@ -717,13 +723,13 @@ editor_process_keypress(int c) {
             {
                 if (c == 'w')
                 {
-                    editor_range range = editor_inner_word_range(buf, editor_cursor_offset(v, buf));
+                    editor_range range = editor_inner_word_range(b, editor_cursor_offset(v, b));
 
                     if (range.end > range.start)
                     {
-                        buffer_delete(buf, range.start, range.end - range.start);
-                        editor_set_cursor_from_offset(v, buf, range.start);
-                        editor_clamp_cursor_x(v, buf);
+                        buffer_delete(b, range.start, range.end - range.start);
+                        editor_set_cursor_from_offset(v, b, range.start);
+                        editor_clamp_cursor_x(v, b);
                         view_scroll_to_cursor(v);
                     }
 
@@ -799,3 +805,210 @@ buffer* editor_active_buffer()
     view *v = &E.views[0];
     return &E.buffers[v->buffer_id];
 }
+
+void
+editor_at_exit()
+{
+    write(STDOUT_FILENO, SHOW_CURSOR, SHOW_CURSOR_LEN);
+    term_exit_alt_screen();
+    term_disable_raw_mode(STDIN_FILENO);
+}
+
+void
+editor_draw()
+{
+    view* v = &E.views[0];
+    buffer *b = editor_active_buffer();
+    int screen_row;
+    u64 gutter_width = 2;
+
+    if (b->lines.count > 0)
+    {
+        u64 line_count = b->lines.count;
+
+        gutter_width = 0;
+        while (line_count > 0)
+        {
+            gutter_width++;
+            line_count /= 10;
+        }
+
+        gutter_width += 2;
+    }
+
+    write(STDOUT_FILENO, HIDE_CURSOR, HIDE_CURSOR_LEN);
+    write(STDOUT_FILENO, CURSOR_HOME, CURSOR_HOME_LEN);
+
+    for (screen_row = 0; screen_row < E.screenrows; screen_row++)
+    {
+        u64 line = v->rowoff + screen_row;
+        u8 is_cursor_line = (line == v->cursor.y);
+
+        if (is_cursor_line)
+        {
+            write(STDOUT_FILENO, CURSOR_LINE_BG, CURSOR_LINE_BG_LEN);
+        }
+
+        if (line >= b->lines.count)
+        {
+            u64 i;
+
+            write(STDOUT_FILENO, "~", 1);
+            for (i = 1; i < gutter_width; i++)
+            {
+                write(STDOUT_FILENO, " ", 1);
+            }
+        }
+        else
+        {
+            u64 line_start = buffer_line_start(b, line);
+            u64 line_len = buffer_line_len(b, line);
+            u64 draw_start = v->coloff;
+            u64 text_cols = 0;
+            u64 draw_len = 0;
+            u64 i;
+            char ln[32];
+            int ln_len;
+
+            ln_len = snprintf(ln, sizeof(ln), "%*llu ",
+                              (int)(gutter_width - 1),
+                              (unsigned long long)(line + 1));
+            if (ln_len > 0)
+            {
+                write(STDOUT_FILENO, ln, (size_t)ln_len);
+            }
+
+            if (E.screencols > (int)gutter_width)
+            {
+                text_cols = (u64)E.screencols - gutter_width;
+            }
+
+            if (draw_start < line_len && text_cols > 0)
+            {
+                draw_len = line_len - draw_start;
+                if (draw_len > text_cols)
+                {
+                    draw_len = text_cols;
+                }
+
+                for (i = 0; i < draw_len; i++)
+                {
+                    u8 c = buffer_byte_at(b, line_start + draw_start + i);
+                    write(STDOUT_FILENO, &c, 1);
+                }
+            }
+
+            for (i = gutter_width + draw_len; i < (u64)E.screencols; i++)
+            {
+                write(STDOUT_FILENO, " ", 1);
+            }
+        }
+
+        if (is_cursor_line)
+        {
+            write(STDOUT_FILENO, "\x1b[0m", 4);
+        }
+
+        if (screen_row < E.screenrows - 1)
+        {
+            write(STDOUT_FILENO, "\r\n", 2);
+        }
+    }
+
+    /* status bar */
+    write(STDOUT_FILENO, "\x1b[47;30m", 8); /* white bg, black fg */
+    write(STDOUT_FILENO, NEXT_LINE, NEXT_LINE_LEN);
+    write(STDOUT_FILENO, CLEAR_LINE, CLEAR_LINE_LEN);
+    write(STDOUT_FILENO, b->file_path.s, b->file_path.len);
+    write(STDOUT_FILENO, "\x1b[0m", 4);
+
+    /* command bar */
+    write(STDOUT_FILENO, NEXT_LINE, NEXT_LINE_LEN);
+    if (E.mode == EDITOR_COMMAND_MODE && E.cmd.cur_pos > 0)
+    {
+        write(STDOUT_FILENO, CLEAR_LINE, CLEAR_LINE_LEN);
+        write(STDOUT_FILENO, E.cmd.data, E.cmd.cur_pos);
+        write(STDOUT_FILENO, SHOW_CURSOR, SHOW_CURSOR_LEN);
+        return;
+    }
+    else if (E.status_message[0] != '\0')
+    {
+        write(STDOUT_FILENO, E.status_message, strlen((char *)E.status_message));
+    }
+    else
+    {
+        write(STDOUT_FILENO, CLEAR_LINE, CLEAR_LINE_LEN);
+    }
+
+    {
+        char seq[32];
+        u64 cursor_screen_x = 0;
+        int cursor_row = (int)(v->cursor.y - v->rowoff) + 1;
+
+        if (v->cursor.x > v->coloff)
+        {
+            cursor_screen_x = v->cursor.x - v->coloff;
+        }
+
+        int cursor_col = (int)(gutter_width + cursor_screen_x + 1);
+        snprintf(seq, sizeof(seq), SET_CURSOR_POS, cursor_row, cursor_col);
+        write(STDOUT_FILENO, seq, strlen(seq));
+    }
+
+    if (E.mode == EDITOR_PENDING_OP_MODE)
+    {
+        write(STDOUT_FILENO, UNDERLINE_CURSOR, UNDERLINE_CURSOR_LEN);
+    }
+    else
+    {
+        write(STDOUT_FILENO, BOX_CURSOR, BOX_CURSOR_LEN);
+    }
+
+    write(STDOUT_FILENO, SHOW_CURSOR, SHOW_CURSOR_LEN);
+}
+
+
+void editor_init(void)
+{
+    E.mode = EDITOR_NORMAL_MODE;
+    E.running = 1;
+    E.alt_screen = 0;
+    E.scratch = new_arena(MB(1));
+    E.cmd = new_arena(MB(1));
+    E.status_message[0] = '\0';
+
+    buffer* buffers = (buffer*)malloc(sizeof(buffer)*32);
+    if (buffers == NULL)
+    {
+        perror("[error] unable to allocate memory for buffers");
+        exit(1);
+    }
+    E.buffers = buffers;
+
+    const char* p = "/home/failbot/src/editor/data/cpu.c";
+    string path = {.s = (u8*)p, .len = strlen(p)};
+    string file;
+    readfile(p, &file, MAX_FILE_SIZE);
+
+    buffer_init(&E.buffers[0], file, path);
+
+    view* views = (view*)malloc(sizeof(view)*32);
+    if (views == NULL)
+    {
+        perror("[error] unable to allocate memory for buffers");
+        exit(1);
+    }
+    E.views = views;
+
+    E.views[0].buffer_id = 0;
+    E.views[0].cursor.x = 0;
+    E.views[0].cursor.y = 0;
+    E.views[0].rowoff = 0;
+    E.views[0].coloff = 0;
+    E.pending_op = 0;
+    E.pending_op_stage = 0;
+
+    term_update_window_size();
+    term_install_signal_handlers();
+}
+

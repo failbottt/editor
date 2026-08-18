@@ -4,6 +4,7 @@
 #include "cmd.h"
 #include "base.h"
 #include "term.h"
+#include "funcs.h"
 
 static u64
 editor_cursor_offset(view *v, buffer *b)
@@ -437,10 +438,8 @@ editor_process_keypress(int c)
         switch(c) {
         case 'A':
             {
-                u64 line = v->cursor.y;
-                u64 insert_off = buffer_line_start(b, line) + buffer_line_len(b, line);
-                E.mode = EDITOR_INSERT_MODE;
-                editor_set_cursor_from_offset(v, b, insert_off);
+                u64 offset = insert_append_line(b, v->cursor.y);
+                editor_set_cursor_from_offset(v, b, offset);
                 break;
             }
         case 'a':

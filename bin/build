@@ -40,4 +40,5 @@ ${cc} ${flags} -o ${target} \
     src/buffer.c \
     src/cmd.c \
     src/term.c \
-    src/file.c
+    src/file.c \
+    src/funcs.c

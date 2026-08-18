@@ -41,4 +41,5 @@ ${cc} ${flags} -o ${target} \
     src/cmd.c \
     src/term.c \
     src/file.c \
-    src/funcs.c
+    src/funcs.c \
+    src/view.c

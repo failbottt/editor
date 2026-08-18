@@ -5,16 +5,12 @@
 #include "base.h"
 #include "term.h"
 #include "funcs.h"
+#include "view.h"
 
 static u64
 editor_cursor_offset(view *v, buffer *b)
 {
     return buffer_line_col_to_offset(b, v->cursor.y, v->cursor.x);
-}
-static void
-editor_set_cursor_from_offset(view *v, buffer *b, u64 offset)
-{
-    buffer_offset_to_line_col(b, offset, &v->cursor.y, &v->cursor.x);
 }
 
 static void
@@ -439,13 +435,12 @@ editor_process_keypress(int c)
         case 'A':
             {
                 u64 offset = insert_append_line(b, v->cursor.y);
-                editor_set_cursor_from_offset(v, b, offset);
+                view_set_cursor_from_offset(v, b, offset);
                 break;
             }
         case 'a':
             {
-                u64 line_len = buffer_line_len(b, v->cursor.y);
-                editor_set_cursor_from_offset(v, b, v->cursor.x + 1);
+                view_set_cursor_from_offset(v, b, v->cursor.x + 1);
                 E.mode = EDITOR_INSERT_MODE;
                 break;
             }
@@ -453,7 +448,7 @@ editor_process_keypress(int c)
             {
                 u64 offset = editor_cursor_offset(v, b);
                 offset = editor_skip_word_backward(b, offset);
-                editor_set_cursor_from_offset(v, b, offset);
+                view_set_cursor_from_offset(v, b, offset);
                 view_scroll_to_cursor(v);
                 break;
             }
@@ -472,7 +467,7 @@ editor_process_keypress(int c)
                 join_off = buffer_line_start(b, line) + buffer_line_len(b, line);
                 buffer_delete(b, join_off, buffer_line_start(b, line + 1) - join_off);
                 buffer_insert(b, join_off, space);
-                editor_set_cursor_from_offset(v, b, prev_cursor);
+                view_set_cursor_from_offset(v, b, prev_cursor);
                 view_scroll_to_cursor(v);
                 break;
             }
@@ -505,7 +500,7 @@ editor_process_keypress(int c)
             {
                 u64 offset = editor_cursor_offset(v, b);
                 offset = editor_skip_word_forward(b, offset);
-                editor_set_cursor_from_offset(v, b, offset);
+                view_set_cursor_from_offset(v, b, offset);
                 view_scroll_to_cursor(v);
                 break;
             }
@@ -514,7 +509,7 @@ editor_process_keypress(int c)
                 u64 offset = editor_cursor_offset(v, b);
 
                 offset = editor_skip_word_end(b, offset);
-                editor_set_cursor_from_offset(v, b, offset);
+                view_set_cursor_from_offset(v, b, offset);
                 view_scroll_to_cursor(v);
                 break;
             }
@@ -528,7 +523,7 @@ editor_process_keypress(int c)
                 u64 insert_off = editor_line_first_nonblank_offset(b, v->cursor.y);
 
                 E.mode = EDITOR_INSERT_MODE;
-                editor_set_cursor_from_offset(v, b, insert_off);
+                view_set_cursor_from_offset(v, b, insert_off);
                 view_scroll_to_cursor(v);
                 break;
             }
@@ -551,7 +546,7 @@ editor_process_keypress(int c)
                 buffer_insert(b, insert_off, nl);
 
                 E.mode = EDITOR_INSERT_MODE;
-                editor_set_cursor_from_offset(v, b, insert_off);
+                view_set_cursor_from_offset(v, b, insert_off);
                 view_scroll_to_cursor(v);
                 break;
             }
@@ -564,7 +559,7 @@ editor_process_keypress(int c)
                 buffer_insert(b, insert_off, nl);
 
                 E.mode = EDITOR_INSERT_MODE;
-                editor_set_cursor_from_offset(v, b, insert_off + 1);
+                view_set_cursor_from_offset(v, b, insert_off + 1);
                 view_scroll_to_cursor(v);
                 break;
             }
@@ -579,7 +574,7 @@ editor_process_keypress(int c)
                     insert_off = buffer_line_start(b, line) +
                         buffer_line_len(b, line);
                     buffer_insert(b, insert_off, *E.register_one);
-                    editor_set_cursor_from_offset(v, b, insert_off);
+                    view_set_cursor_from_offset(v, b, insert_off);
                     view_scroll_to_cursor(v);
                     break;
                 }
@@ -587,7 +582,7 @@ editor_process_keypress(int c)
                 line = v->cursor.y;
                 insert_off = editor_cursor_offset(v, b);
                 buffer_insert(b, insert_off, *E.register_one);
-                editor_set_cursor_from_offset(v, b, insert_off);
+                view_set_cursor_from_offset(v, b, insert_off);
                 view_scroll_to_cursor(v);
                 break;
             }
@@ -599,14 +594,14 @@ editor_process_keypress(int c)
                     string nl = {.s = (u8*)"\n", .len = 1};
                     buffer_insert(b, insert_off, *E.register_one);
                     buffer_insert(b, insert_off + E.register_one->len, nl);
-                    editor_set_cursor_from_offset(v, b, insert_off);
+                    view_set_cursor_from_offset(v, b, insert_off);
                     view_scroll_to_cursor(v);
                     break;
                 }
 
                 u64 insert_off = editor_cursor_offset(v, b);
                 buffer_insert(b, insert_off, *E.register_one);
-                editor_set_cursor_from_offset(v, b, insert_off);
+                view_set_cursor_from_offset(v, b, insert_off);
                 view_scroll_to_cursor(v);
                 break;
             }
@@ -622,7 +617,7 @@ editor_process_keypress(int c)
             }
         case 'G':
             {
-                editor_set_cursor_from_offset(v, b, b->total_len - 1);
+                view_set_cursor_from_offset(v, b, b->total_len - 1);
                 view_scroll_to_cursor(v);
                 break;
             }
@@ -698,7 +693,7 @@ editor_process_keypress(int c)
             if (offset > 0)
             {
                 buffer_delete(b, offset - 1, 1);
-                editor_set_cursor_from_offset(v, b, offset - 1);
+                view_set_cursor_from_offset(v, b, offset - 1);
                 view_scroll_to_cursor(v);
             }
             break;
@@ -706,7 +701,7 @@ editor_process_keypress(int c)
             {
                 /* @cleanup: backspace is 4 */
                 buffer_insert(b, offset, TAB);
-                editor_set_cursor_from_offset(v, b, offset + TAB.len);
+                view_set_cursor_from_offset(v, b, offset + TAB.len);
                 view_scroll_to_cursor(v);
                 break;
             }
@@ -720,7 +715,7 @@ editor_process_keypress(int c)
                 u8 ch = (u8)c;
                 string text = {.s = &ch, .len = 1};
                 buffer_insert(b, offset, text);
-                editor_set_cursor_from_offset(v, b, offset + 1);
+                view_set_cursor_from_offset(v, b, offset + 1);
                 view_scroll_to_cursor(v);
             }
             break;
@@ -781,7 +776,7 @@ editor_process_keypress(int c)
                         buffer_slice(b, range.start, range.end - range.start, s);
                         E.register_one = s;
                         E.paste_newline = FALSE;
-                        editor_set_cursor_from_offset(v, b, range.start);
+                        view_set_cursor_from_offset(v, b, range.start);
                         editor_clamp_cursor_x(v, b);
                         view_scroll_to_cursor(v);
                     }
@@ -808,7 +803,7 @@ editor_process_keypress(int c)
                     if (range.end > range.start)
                     {
                         buffer_delete(b, range.start, range.end - range.start);
-                        editor_set_cursor_from_offset(v, b, range.start);
+                        view_set_cursor_from_offset(v, b, range.start);
                         editor_clamp_cursor_x(v, b);
                         view_scroll_to_cursor(v);
                     }
@@ -830,7 +825,7 @@ editor_process_keypress(int c)
                     if (range.end > range.start)
                     {
                         buffer_delete(b, range.start, range.end - range.start);
-                        editor_set_cursor_from_offset(v, b, range.start);
+                        view_set_cursor_from_offset(v, b, range.start);
                         editor_clamp_cursor_x(v, b);
                         view_scroll_to_cursor(v);
                     }

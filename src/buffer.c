@@ -99,20 +99,21 @@ find_piece_at_offset(buffer *b, u64 offset)
 u8
 buffer_byte_at(buffer *b, u64 offset)
 {
+    string r;
+
     piece_loc loc = find_piece_at_offset(b, offset);
     piece p = b->pieces.items[loc.piece_index];
-    string storage;
 
     if (p.source == BUFFER_SRC_ORIG)
     {
-        storage = b->orig;
+        r = b->orig;
     }
     else
     {
-        storage = b->add;
+        r = b->add;
     }
 
-    return storage.s[p.start + loc.piece_offset];
+    return r.s[p.start + loc.piece_offset];
 }
 
 void

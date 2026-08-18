@@ -12,6 +12,7 @@
 #define EDITOR_VISUAL_MODE  3
 #define EDITOR_COMMAND_MODE 4
 #define EDITOR_PENDING_OP_MODE 5
+#define EDITOR_SEARCH_MODE 6
 
 typedef struct {
     int mode;
@@ -31,9 +32,12 @@ typedef struct {
     /* @cleanup */
     arena cmd;
     u8 status_message[256];
+
 } editor;
 
 extern editor E;
+
+#define TAB (string){.s = (u8*)"    ", .len = 4}
 
 void editor_process_keypress(int c);
 void editor_move_cursor(u64 c);

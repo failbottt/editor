@@ -422,6 +422,48 @@ editor_process_keypress(int c) {
     if (E.mode == EDITOR_NORMAL_MODE)
     {
         switch(c) {
+        case 'A':
+            {
+                u64 line = v->cursor.y;
+                u64 insert_off = buffer_line_start(buf, line) + buffer_line_len(buf, line);
+                E.mode = EDITOR_INSERT_MODE;
+                editor_set_cursor_from_offset(v, buf, insert_off);
+                break;
+            }
+        case 'a':
+            {
+                u64 line_len = buffer_line_len(buf, v->cursor.y);
+                editor_set_cursor_from_offset(v, buf, v->cursor.x + 1);
+                E.mode = EDITOR_INSERT_MODE;
+                break;
+            }
+        case 'b':
+            {
+                u64 offset = editor_cursor_offset(v, buf);
+                offset = editor_skip_word_backward(buf, offset);
+                editor_set_cursor_from_offset(v, buf, offset);
+                view_scroll_to_cursor(v);
+                break;
+            }
+        case 'J':
+            {
+                u64 line = v->cursor.y;
+                u64 prev_cursor = editor_cursor_offset(v, buf);
+                u64 join_off;
+                string space = {.s = (u8*)" ", .len = 1};
+
+                if (line + 1 >= buf->lines.count)
+                {
+                    break;
+                }
+
+                join_off = buffer_line_start(buf, line) + buffer_line_len(buf, line);
+                buffer_delete(buf, join_off, buffer_line_start(buf, line + 1) - join_off);
+                buffer_insert(buf, join_off, space);
+                editor_set_cursor_from_offset(v, buf, prev_cursor);
+                view_scroll_to_cursor(v);
+                break;
+            }
         case 'j':
         case 'k':
         case 'h':
@@ -445,14 +487,6 @@ editor_process_keypress(int c) {
                 E.mode = EDITOR_COMMAND_MODE;
                 u8 *colon = (u8*)":";
                 arena_push_array(&E.cmd, colon, 1);
-                break;
-            }
-        case 'b':
-            {
-                u64 offset = editor_cursor_offset(v, buf);
-                offset = editor_skip_word_backward(buf, offset);
-                editor_set_cursor_from_offset(v, buf, offset);
-                view_scroll_to_cursor(v);
                 break;
             }
         case 'w':
@@ -484,21 +518,6 @@ editor_process_keypress(int c) {
                 E.mode = EDITOR_INSERT_MODE;
                 editor_set_cursor_from_offset(v, buf, insert_off);
                 view_scroll_to_cursor(v);
-                break;
-            }
-        case 'A':
-            {
-                u64 line = v->cursor.y;
-                u64 insert_off = buffer_line_start(buf, line) + buffer_line_len(buf, line);
-                E.mode = EDITOR_INSERT_MODE;
-                editor_set_cursor_from_offset(v, buf, insert_off);
-                break;
-            }
-        case 'a':
-            {
-                u64 line_len = buffer_line_len(buf, v->cursor.y);
-                editor_set_cursor_from_offset(v, buf, v->cursor.x + 1);
-                E.mode = EDITOR_INSERT_MODE;
                 break;
             }
         case 'O':
@@ -619,13 +638,11 @@ editor_process_keypress(int c) {
                 view_scroll_to_cursor(v);
             }
             break;
-        case TAB:
+        case KEY_TAB:
             {
-                /* 4 spaces */
-                u8* tab = (u8*)"    ";
-                string text = {.s = tab, .len = 4};
-                buffer_insert(buf, offset, text);
-                editor_set_cursor_from_offset(v, buf, offset + text.len);
+                /* @cleanup: backspace is 4 */
+                buffer_insert(buf, offset, TAB);
+                editor_set_cursor_from_offset(v, buf, offset + TAB.len);
                 view_scroll_to_cursor(v);
                 break;
             }
@@ -674,6 +691,21 @@ editor_process_keypress(int c) {
                 if (c == 'i')
                 {
                     E.pending_op_stage = 1;
+                    return;
+                }
+                else if (c == 'w')
+                {
+                    editor_range range = editor_inner_word_range(buf, editor_cursor_offset(v, buf));
+
+                    if (range.end > range.start)
+                    {
+                        buffer_delete(buf, range.start, range.end - range.start);
+                        editor_set_cursor_from_offset(v, buf, range.start);
+                        editor_clamp_cursor_x(v, buf);
+                        view_scroll_to_cursor(v);
+                    }
+
+                    editor_clear_pending_op();
                     return;
                 }
 

@@ -18,6 +18,7 @@ typedef uint64_t u64;
 // byte access is valid from 0x0000..0xFFFE
 #define UPPER_16BIT_BOUND 0xFFFE
 
+#define UPPER_8BIT_BOUND 0xFFFF
 // word access is valid from 0x0000..0xFFFE
 #define UPPER_8BIT_BOUND 0xFFFF
 

@@ -1,13 +1,7 @@
-#ifdef __linux__
-#define _POSIX_C_SOURCE 200809L
-#endif
-
 #include "editor.h"
 #include "term.h"
 
-/* define globally */
 editor E;
-
 
 int main(int argc, char **argv)
 {

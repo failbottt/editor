@@ -5,6 +5,15 @@
 #include "view.h"
 #include "buffer.h"
 
+#define YANK    'y'
+#define WORD    'w'
+#define DELETE  'd'
+#define INNER   'i'
+#define CLEAR   'c'
+#define REPLACE 'r'
+
+#define TAB (string){.s = (u8*)"    ", .len = 4}
+
 #define MAX_FILE_SIZE GB(1)
 
 #define EDITOR_NORMAL_MODE  1
@@ -24,6 +33,12 @@ typedef struct {
     u64 pending_op;
     u64 pending_op_stage;
 
+    string *register_one;
+    u8 paste_newline;
+
+    /* @cleanup tmp */
+    u64 active_view;
+
     buffer* buffers;
     view* views;
 
@@ -36,8 +51,6 @@ typedef struct {
 } editor;
 
 extern editor E;
-
-#define TAB (string){.s = (u8*)"    ", .len = 4}
 
 u64 editor_read_key(int fd);
 void editor_process_keypress(int c);

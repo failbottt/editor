@@ -41,6 +41,19 @@ editor_clear_pending_op(void)
     E.pending_op_stage = 0;
 }
 
+static void
+editor_free_register_one(void)
+{
+    if (E.register_one == NULL)
+    {
+        return;
+    }
+
+    free(E.register_one->s);
+    free(E.register_one);
+    E.register_one = NULL;
+}
+
 u64
 editor_read_key(int fd)
 {
@@ -414,10 +427,9 @@ editor_move_cursor(u64 key)
 }
 
 void
-editor_process_keypress(int c) {
-
-    /* @cleanup: hardcoded */
-    view *v = &E.views[0];
+editor_process_keypress(int c)
+{
+    view *v = &E.views[E.active_view];
     buffer *b = &E.buffers[v->buffer_id];
 
     if (E.mode == EDITOR_NORMAL_MODE)
@@ -547,11 +559,41 @@ editor_process_keypress(int c) {
                 view_scroll_to_cursor(v);
                 break;
             }
+        case 'p':
+            {
+                u64 line;
+                u64 insert_off;
+
+                if (E.paste_newline)
+                {
+                    line = v->cursor.y;
+                    u64 insert_off = buffer_line_start(b, line) +
+                        buffer_line_len(b, line);
+                    string nl = {.s = (u8*)"\n", .len = 1};
+                    buffer_insert(b, insert_off, nl);
+                    editor_set_cursor_from_offset(v, b, insert_off + 1);
+
+                    line = v->cursor.y;
+                    insert_off = buffer_line_start(b, line) +
+                        buffer_line_len(b, line);
+                    buffer_insert(b, insert_off, *E.register_one);
+                    editor_set_cursor_from_offset(v, b, insert_off);
+                    view_scroll_to_cursor(v);
+                    break;
+                }
+
+                line = v->cursor.y;
+                insert_off = editor_cursor_offset(v, b);
+                buffer_insert(b, insert_off, *E.register_one);
+                editor_set_cursor_from_offset(v, b, insert_off);
+                view_scroll_to_cursor(v);
+                break;
+            }
         case 'g':
-        case 'd':
-        case 'c':
-        case 'r':
-        case 'y':
+        case REPLACE:
+        case CLEAR:
+        case DELETE:
+        case YANK:
             {
                 E.mode = EDITOR_PENDING_OP_MODE;
                 E.pending_op = c;
@@ -673,33 +715,69 @@ editor_process_keypress(int c) {
             return;
         }
 
-        if (E.pending_op == 'y')
-        {
-
-            if (c == 'i')
-            {
-                E.pending_op_stage = 1;
-                return;
-            }
-            else if (c == 'w')
-            {
-
-            }
-
-            editor_clear_pending_op();
-            return;
-        }
-
-        if (E.pending_op == 'd')
+        if (E.pending_op == YANK)
         {
             if (E.pending_op_stage == 0)
             {
-                if (c == 'i')
+                if (c == INNER)
                 {
                     E.pending_op_stage = 1;
                     return;
                 }
                 else if (c == 'w')
+                {
+
+                }
+                else if (c == YANK)
+                {
+                    editor_free_register_one();
+                    string *s = malloc(sizeof(string));
+                    u64 line = v->cursor.y;
+                    u64 start = buffer_line_start(b, line);
+                    u64 line_len = buffer_line_len(b, line);
+                    buffer_slice(b, start, line_len, s);
+
+                    E.register_one = s;
+                    E.paste_newline = TRUE;
+                    editor_clear_pending_op();
+                    return;
+                }
+            }
+
+            if (E.pending_op_stage == 1)
+            {
+                if (c == WORD)
+                {
+                    editor_range range = editor_inner_word_range(b, editor_cursor_offset(v, b));
+
+                    if (range.end > range.start)
+                    {
+                        editor_free_register_one();
+                        string *s = (string*)malloc(sizeof(string));
+                        buffer_slice(b, range.start, range.end - range.start, s);
+                        E.register_one = s;
+                        E.paste_newline = FALSE;
+                        editor_set_cursor_from_offset(v, b, range.start);
+                        editor_clamp_cursor_x(v, b);
+                        view_scroll_to_cursor(v);
+                    }
+
+                    editor_clear_pending_op();
+                    return;
+                }
+            }
+        }
+
+        if (E.pending_op == DELETE)
+        {
+            if (E.pending_op_stage == 0)
+            {
+                if (c == INNER)
+                {
+                    E.pending_op_stage = 1;
+                    return;
+                }
+                else if (c == WORD)
                 {
                     editor_range range = editor_inner_word_range(b, editor_cursor_offset(v, b));
 
@@ -721,7 +799,7 @@ editor_process_keypress(int c) {
 
             if (E.pending_op_stage == 1)
             {
-                if (c == 'w')
+                if (c == WORD)
                 {
                     editor_range range = editor_inner_word_range(b, editor_cursor_offset(v, b));
 
@@ -741,6 +819,14 @@ editor_process_keypress(int c) {
                 return;
             }
         }
+
+        if (E.pending_op == YANK)
+        {
+
+            return;
+        }
+
+
 
         editor_clear_pending_op();
         return;
@@ -809,6 +895,7 @@ buffer* editor_active_buffer()
 void
 editor_at_exit()
 {
+    editor_free_register_one();
     write(STDOUT_FILENO, SHOW_CURSOR, SHOW_CURSOR_LEN);
     term_exit_alt_screen();
     term_disable_raw_mode(STDIN_FILENO);
@@ -1008,7 +1095,9 @@ void editor_init(void)
     E.pending_op = 0;
     E.pending_op_stage = 0;
 
+    /* @cleanup tmp */
+    E.active_view = 0;
+
     term_update_window_size();
     term_install_signal_handlers();
 }
-

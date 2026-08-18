@@ -86,6 +86,7 @@ void cmd_process(arena *cmd)
     else if (i < cmd->cur_pos && cmd->data[i] == 'w')
     {
         int force = 0;
+        int quit_after_save = FALSE;
         write_file_result result;
 
         i++;
@@ -93,6 +94,11 @@ void cmd_process(arena *cmd)
         if (i < cmd->cur_pos && cmd->data[i] == '!')
         {
             force = 1;
+            i++;
+        }
+        else if (i < cmd->cur_pos && cmd->data[i] == 'q')
+        {
+            quit_after_save = TRUE;
             i++;
         }
 
@@ -104,27 +110,33 @@ void cmd_process(arena *cmd)
         if (i != cmd->cur_pos)
         {
             editor_set_cmd_status_message((u8*)"Trailing characters on write");
+            return;
+        }
+
+        result = write_file(editor_active_buffer(), force);
+
+        if (result.status == WRITE_FILE_OK)
+        {
+            set_write_status_message(result);
+            if (quit_after_save)
+            {
+                cmd->cur_pos = 0;
+                E.mode = EDITOR_NORMAL_MODE;
+                E.running = FALSE;
+                return;
+            }
+        }
+        else if (result.status == WRITE_FILE_NO_PATH)
+        {
+            editor_set_cmd_status_message((u8*)"No file name");
+        }
+        else if (result.status == WRITE_FILE_NEEDS_CONFIRMATION)
+        {
+            editor_set_cmd_status_message((u8*)"File changed on disk. Use :w! to overwrite");
         }
         else
         {
-            result = write_file(editor_active_buffer(), force);
-
-            if (result.status == WRITE_FILE_OK)
-            {
-                set_write_status_message(result);
-            }
-            else if (result.status == WRITE_FILE_NO_PATH)
-            {
-                editor_set_cmd_status_message((u8*)"No file name");
-            }
-            else if (result.status == WRITE_FILE_NEEDS_CONFIRMATION)
-            {
-                editor_set_cmd_status_message((u8*)"File changed on disk. Use :w! to overwrite");
-            }
-            else
-            {
-                editor_set_cmd_status_message((u8*)"Unable to write file");
-            }
+            editor_set_cmd_status_message((u8*)"Unable to write file");
         }
     }
     else

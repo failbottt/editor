@@ -178,6 +178,21 @@ editor_draw()
     view* v = &E.views[0];
     buffer *b = editor_active_buffer();
     int screen_row;
+    u64 gutter_width = 2;
+
+    if (b->lines.count > 0)
+    {
+        u64 line_count = b->lines.count;
+
+        gutter_width = 0;
+        while (line_count > 0)
+        {
+            gutter_width++;
+            line_count /= 10;
+        }
+
+        gutter_width += 2;
+    }
 
     write(STDOUT_FILENO, HIDE_CURSOR, HIDE_CURSOR_LEN);
     write(STDOUT_FILENO, CURSOR_HOME, CURSOR_HOME_LEN);
@@ -185,25 +200,53 @@ editor_draw()
     for (screen_row = 0; screen_row < E.screenrows; screen_row++)
     {
         u64 line = v->rowoff + screen_row;
+        u8 is_cursor_line = (line == v->cursor.y);
+
+        if (is_cursor_line)
+        {
+            write(STDOUT_FILENO, CURSOR_LINE_BG, CURSOR_LINE_BG_LEN);
+        }
 
         if (line >= b->lines.count)
         {
+            u64 i;
+
             write(STDOUT_FILENO, "~", 1);
+            for (i = 1; i < gutter_width; i++)
+            {
+                write(STDOUT_FILENO, " ", 1);
+            }
         }
         else
         {
             u64 line_start = buffer_line_start(b, line);
             u64 line_len = buffer_line_len(b, line);
             u64 draw_start = v->coloff;
+            u64 text_cols = 0;
             u64 draw_len = 0;
             u64 i;
+            char ln[32];
+            int ln_len;
 
-            if (draw_start < line_len)
+            ln_len = snprintf(ln, sizeof(ln), "%*llu ",
+                              (int)(gutter_width - 1),
+                              (unsigned long long)(line + 1));
+            if (ln_len > 0)
+            {
+                write(STDOUT_FILENO, ln, (size_t)ln_len);
+            }
+
+            if (E.screencols > (int)gutter_width)
+            {
+                text_cols = (u64)E.screencols - gutter_width;
+            }
+
+            if (draw_start < line_len && text_cols > 0)
             {
                 draw_len = line_len - draw_start;
-                if (draw_len > (u64)E.screencols)
+                if (draw_len > text_cols)
                 {
-                    draw_len = E.screencols;
+                    draw_len = text_cols;
                 }
 
                 for (i = 0; i < draw_len; i++)
@@ -212,9 +255,17 @@ editor_draw()
                     write(STDOUT_FILENO, &c, 1);
                 }
             }
+
+            for (i = gutter_width + draw_len; i < (u64)E.screencols; i++)
+            {
+                write(STDOUT_FILENO, " ", 1);
+            }
         }
 
-        write(STDOUT_FILENO, CLEAR_LINE, CLEAR_LINE_LEN);
+        if (is_cursor_line)
+        {
+            write(STDOUT_FILENO, "\x1b[0m", 4);
+        }
 
         if (screen_row < E.screenrows - 1)
         {
@@ -249,11 +300,26 @@ editor_draw()
 
     {
         char seq[32];
+        u64 cursor_screen_x = 0;
         int cursor_row = (int)(v->cursor.y - v->rowoff) + 1;
-        int cursor_col = (int)(v->cursor.x - v->coloff) + 1;
 
+        if (v->cursor.x > v->coloff)
+        {
+            cursor_screen_x = v->cursor.x - v->coloff;
+        }
+
+        int cursor_col = (int)(gutter_width + cursor_screen_x + 1);
         snprintf(seq, sizeof(seq), SET_CURSOR_POS, cursor_row, cursor_col);
         write(STDOUT_FILENO, seq, strlen(seq));
+    }
+
+    if (E.mode == EDITOR_PENDING_OP_MODE)
+    {
+        write(STDOUT_FILENO, UNDERLINE_CURSOR, UNDERLINE_CURSOR_LEN);
+    }
+    else
+    {
+        write(STDOUT_FILENO, BOX_CURSOR, BOX_CURSOR_LEN);
     }
 
     write(STDOUT_FILENO, SHOW_CURSOR, SHOW_CURSOR_LEN);
@@ -303,6 +369,8 @@ void init_editor(void)
     E.views[0].cursor.y = 0;
     E.views[0].rowoff = 0;
     E.views[0].coloff = 0;
+    E.pending_op = 0;
+    E.pending_op_stage = 0;
 
     update_window_size();
     install_signal_handlers();
@@ -318,7 +386,9 @@ int main(int argc, char **argv)
     while(E.running)
     {
         editor_draw();
-        editor_process_keypress(STDIN_FILENO);
+
+        int c = editor_read_key(STDIN_FILENO);
+        editor_process_keypress(c);
 
         /* end of frame cleanup */
         E.scratch.cur_pos = 0;

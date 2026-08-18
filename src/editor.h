@@ -11,6 +11,7 @@
 #define EDITOR_INSERT_MODE  2
 #define EDITOR_VISUAL_MODE  3
 #define EDITOR_COMMAND_MODE 4
+#define EDITOR_PENDING_OP_MODE 5
 
 typedef struct {
     int mode;
@@ -19,6 +20,8 @@ typedef struct {
     int screencols;
     int rawmode;
     int alt_screen;
+    int pending_op;
+    int pending_op_stage;
 
     buffer* buffers;
     view* views;
@@ -32,7 +35,7 @@ typedef struct {
 
 extern editor E;
 
-void editor_process_keypress(int fd);
+void editor_process_keypress(int c);
 void editor_move_cursor(u64 c);
 u64 editor_read_key(int fd);
 void editor_set_cmd_status_message(u8 *msg);

@@ -33,6 +33,15 @@
 
 #define SET_CURSOR_POS          "\x1b[%d;%dH"
 
+#define UNDERLINE_CURSOR        "\x1b[4 q"
+#define UNDERLINE_CURSOR_LEN    5
+
+#define BOX_CURSOR              "\x1b[2 q"
+#define BOX_CURSOR_LEN          5
+
+#define CURSOR_LINE_BG          "\x1b[48;5;235m"
+#define CURSOR_LINE_BG_LEN      11
+
 void terminal_enter_alt_screen();
 void terminal_exit_alt_screen();
 

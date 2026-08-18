@@ -5,12 +5,14 @@
 #include "view.h"
 #include "buffer.h"
 
-#define YANK    'y'
-#define WORD    'w'
-#define DELETE  'd'
-#define INNER   'i'
-#define CLEAR   'c'
-#define REPLACE 'r'
+#define YANK            'y'
+#define WORD            'w'
+#define DELETE          'd'
+#define INNER           'i'
+#define CLEAR           'c'
+#define REPLACE         'r'
+#define PASTE           'p'
+#define PASTE_BEFORE    'P'
 
 #define TAB (string){.s = (u8*)"    ", .len = 4}
 

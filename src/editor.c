@@ -535,14 +535,24 @@ editor_process_keypress(int c)
             }
         case 'O':
             {
-                u64 line = v->cursor.y - 1;
-                u64 insert_off =
-                    buffer_line_start(b, line) + buffer_line_len(b, line);
+                u64 insert_off;
+
+                if (v->cursor.y == 0)
+                {
+                    insert_off = buffer_line_start(b, 0);
+                }
+                else
+                {
+                    u64 line = v->cursor.y - 1;
+                    insert_off =
+                        buffer_line_start(b, line) + buffer_line_len(b, line) - 1;
+                }
+
                 string nl = {.s = (u8*)"\n", .len = 1};
                 buffer_insert(b, insert_off, nl);
 
                 E.mode = EDITOR_INSERT_MODE;
-                editor_set_cursor_from_offset(v, b, insert_off + 1);
+                editor_set_cursor_from_offset(v, b, insert_off);
                 view_scroll_to_cursor(v);
                 break;
             }
@@ -559,20 +569,13 @@ editor_process_keypress(int c)
                 view_scroll_to_cursor(v);
                 break;
             }
-        case 'p':
+        case PASTE:
             {
                 u64 line;
                 u64 insert_off;
 
                 if (E.paste_newline)
                 {
-                    line = v->cursor.y;
-                    u64 insert_off = buffer_line_start(b, line) +
-                        buffer_line_len(b, line);
-                    string nl = {.s = (u8*)"\n", .len = 1};
-                    buffer_insert(b, insert_off, nl);
-                    editor_set_cursor_from_offset(v, b, insert_off + 1);
-
                     line = v->cursor.y;
                     insert_off = buffer_line_start(b, line) +
                         buffer_line_len(b, line);
@@ -584,6 +587,25 @@ editor_process_keypress(int c)
 
                 line = v->cursor.y;
                 insert_off = editor_cursor_offset(v, b);
+                buffer_insert(b, insert_off, *E.register_one);
+                editor_set_cursor_from_offset(v, b, insert_off);
+                view_scroll_to_cursor(v);
+                break;
+            }
+        case PASTE_BEFORE:
+            {
+                if (E.paste_newline)
+                {
+                    u64 insert_off = buffer_line_start(b, v->cursor.y);
+                    string nl = {.s = (u8*)"\n", .len = 1};
+                    buffer_insert(b, insert_off, *E.register_one);
+                    buffer_insert(b, insert_off + E.register_one->len, nl);
+                    editor_set_cursor_from_offset(v, b, insert_off);
+                    view_scroll_to_cursor(v);
+                    break;
+                }
+
+                u64 insert_off = editor_cursor_offset(v, b);
                 buffer_insert(b, insert_off, *E.register_one);
                 editor_set_cursor_from_offset(v, b, insert_off);
                 view_scroll_to_cursor(v);
@@ -748,7 +770,10 @@ editor_process_keypress(int c)
             {
                 if (c == WORD)
                 {
-                    editor_range range = editor_inner_word_range(b, editor_cursor_offset(v, b));
+                    editor_range range = editor_inner_word_range(
+                            b,
+                            editor_cursor_offset(v, b)
+                            );
 
                     if (range.end > range.start)
                     {

@@ -16,6 +16,7 @@
 - find instances of word under cursor (*)
 - find matching brace/paren/bracket
 - `:q` if multiple splits open (just close focused split)
+- on save if file changed out underneath ask for confirmation before writing
 
 # soon
 ---

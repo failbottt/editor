@@ -388,7 +388,7 @@ editor_inner_word_range(buffer *b, u64 offset)
 void
 editor_move_cursor(u64 key)
 {
-    view *v = &E.views[0];
+    view *v = &E.views[E.active_view];
     buffer *b = &E.buffers[v->buffer_id];
 
     switch (key) {
@@ -411,7 +411,7 @@ editor_move_cursor(u64 key)
         case KEY_L:
             {
                 u64 line_len = buffer_line_len(b, v->cursor.y);
-                if (v->cursor.x < line_len)
+                if (v->cursor.x < line_len - 1)
                 {
                     v->cursor.x++;
                 }
@@ -434,7 +434,7 @@ editor_process_keypress(int c)
         switch(c) {
         case 'A':
             {
-                u64 offset = insert_append_line(b, v->cursor.y);
+                u64 offset = insert_at_end_of_line(b, v->cursor.y);
                 view_set_cursor_from_offset(v, b, offset);
                 break;
             }
@@ -456,17 +456,9 @@ editor_process_keypress(int c)
             {
                 u64 line = v->cursor.y;
                 u64 prev_cursor = editor_cursor_offset(v, b);
-                u64 join_off;
-                string space = {.s = (u8*)" ", .len = 1};
 
-                if (line + 1 >= b->lines.count)
-                {
-                    break;
-                }
+                join_lines(b, line);
 
-                join_off = buffer_line_start(b, line) + buffer_line_len(b, line);
-                buffer_delete(b, join_off, buffer_line_start(b, line + 1) - join_off);
-                buffer_insert(b, join_off, space);
                 view_set_cursor_from_offset(v, b, prev_cursor);
                 view_scroll_to_cursor(v);
                 break;
@@ -529,22 +521,7 @@ editor_process_keypress(int c)
             }
         case 'O':
             {
-                u64 insert_off;
-
-                if (v->cursor.y == 0)
-                {
-                    insert_off = buffer_line_start(b, 0);
-                }
-                else
-                {
-                    u64 line = v->cursor.y - 1;
-                    insert_off =
-                        buffer_line_start(b, line) + buffer_line_len(b, line) - 1;
-                }
-
-                string nl = {.s = (u8*)"\n", .len = 1};
-                buffer_insert(b, insert_off, nl);
-
+                u64 insert_off = insert_above_current_line(b, v->cursor.y);
                 E.mode = EDITOR_INSERT_MODE;
                 view_set_cursor_from_offset(v, b, insert_off);
                 view_scroll_to_cursor(v);
@@ -552,12 +529,7 @@ editor_process_keypress(int c)
             }
         case 'o':
             {
-                u64 line = v->cursor.y;
-                u64 insert_off =
-                    buffer_line_start(b, line) + buffer_line_len(b, line);
-                string nl = {.s = (u8*)"\n", .len = 1};
-                buffer_insert(b, insert_off, nl);
-
+                u64 insert_off = insert_below_current_line(b, v->cursor.y);
                 E.mode = EDITOR_INSERT_MODE;
                 view_set_cursor_from_offset(v, b, insert_off + 1);
                 view_scroll_to_cursor(v);

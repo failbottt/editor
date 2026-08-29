@@ -28,7 +28,7 @@ fi
 
 if [[ "${debug:-0}" == "1" ]]; then
     echo "[debug build]"
-    cc_debug="-g"
+    cc_debug="-g -O0"
 fi
 
 target="build/editor"

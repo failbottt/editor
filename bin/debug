@@ -1,7 +1,45 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 
 "$(dirname "$0")/build" debug
 
-exec gdb --args ./build/editor "$@"
+make_gdbserver_launcher() {
+    local launcher
+    launcher="$(mktemp "${TMPDIR:-/tmp}/editor-gdbserver.XXXXXX")"
+    cat >"${launcher}" <<EOF
+#!/bin/bash
+set -u
+
+gdbserver --once 127.0.0.1:2345 ./build/editor "\$@"
+status=\$?
+if [[ "\$status" -eq 0 ]]; then
+    exit 0
+fi
+
+echo
+echo "gdbserver exited with status \${status}"
+read -r -p "Press Enter to close this pane..." _
+exit "\${status}"
+EOF
+    chmod +x "${launcher}"
+    printf '%s\n' "${launcher}"
+}
+
+if [[ -n "${TMUX-}" ]] && command -v gdbserver >/dev/null 2>&1; then
+    # Run the program under gdbserver in a separate pane so GDB can set
+    # breakpoints before execution reaches main or any later line.
+    launcher="$(make_gdbserver_launcher)"
+    trap 'rm -f "${launcher}"' EXIT INT TERM
+
+    tmux split-window -h -c "$PWD" bash "${launcher}" "$@" >/dev/null
+
+    sleep 0.5
+
+    exec gdb -q \
+        -ex 'set debuginfod enabled off' \
+        -ex 'target remote 127.0.0.1:2345' \
+        ./build/editor
+fi
+
+exec gdb -q --args ./build/editor "$@"

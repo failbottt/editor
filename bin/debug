@@ -26,20 +26,25 @@ EOF
     printf '%s\n' "${launcher}"
 }
 
-if [[ -n "${TMUX-}" ]] && command -v gdbserver >/dev/null 2>&1; then
-    # Run the program under gdbserver in a separate pane so GDB can set
-    # breakpoints before execution reaches main or any later line.
-    launcher="$(make_gdbserver_launcher)"
-    trap 'rm -f "${launcher}"' EXIT INT TERM
-
-    tmux split-window -h -c "$PWD" bash "${launcher}" "$@" >/dev/null
-
-    sleep 0.5
-
-    exec gdb -q \
-        -ex 'set debuginfod enabled off' \
-        -ex 'target remote 127.0.0.1:2345' \
-        ./build/editor
+if ! command -v gdbserver >/dev/null 2>&1; then
+    exec gdb -q --args ./build/editor "$@"
 fi
 
-exec gdb -q --args ./build/editor "$@"
+gdbserver_launcher="$(make_gdbserver_launcher)"
+trap 'rm -f "${gdbserver_launcher}"' EXIT INT TERM
+
+if [[ -n "${TMUX-}" ]]; then
+    gdbserver_pane="$(
+        tmux split-window -h -P -F '#{pane_id}' \
+            -c "$PWD" \
+            bash "${gdbserver_launcher}" "$@"
+    )"
+    tmux split-window -v -t "${gdbserver_pane}" -c "$PWD" \
+        nvim ./src/main.c >/dev/null
+    sleep 0.5
+fi
+
+exec gdb -q \
+    -ex 'set debuginfod enabled off' \
+    -ex 'target remote 127.0.0.1:2345' \
+    ./build/editor

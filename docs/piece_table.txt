@@ -1,0 +1,92 @@
+to insert text at a position:
+
+1. If there is no text to insert, stop.
+
+2. Copy the new text into the add buffer.
+   Record:
+   - the starting position in the add buffer
+   - the length of the new text
+
+3. If the document has no pieces yet:
+   - create one new piece for the inserted text
+   - stop
+
+4. If the insert position is at the end of the document:
+   - add a new piece for the inserted text to the end
+   - stop
+
+5. Find the piece that covers the insert position.
+
+6. If the insert position is exactly at the start of a piece:
+   - insert the new piece before that piece
+   - stop
+
+7. If the insert position is in the middle of a piece:
+   - split that piece into two pieces
+   - insert the new piece between them
+
+8. If the insert position is at the end of a piece:
+   - insert the new piece after that piece
+
+Internal function: findPieceAt
+
+to find the piece at a given position:
+
+1. Start at the beginning of the piece list.
+
+2. Keep a running count of how many document characters have been covered so far.
+
+3. For each piece:
+   - if the target position falls inside this piece,
+     return:
+     - the index of this piece
+     - the offset inside the piece
+
+4. If the position is exactly at the end of the document,
+   return that special case too.
+
+5. If no piece matches, report that the position is invalid.
+
+A more explicit version:
+
+to find the piece at a given position:
+
+1. Set totalCovered to 0.
+
+2. Look through the pieces one by one.
+
+3. For each piece:
+   - if position is less than totalCovered + piece length,
+     then the position is inside this piece
+   - the offset inside the piece is:
+     position - totalCovered
+   - return the piece index and that offset
+
+4. If position equals totalCovered after the last piece,
+   then the position is at the end of the document.
+   Return "end of document".
+
+5. If position is outside the document,
+   return an error.
+
+Internal function: split a piece
+
+to split a piece at an offset:
+
+1. Take one piece and one offset inside it.
+
+2. Create a left piece that covers everything before the offset.
+
+3. Create a right piece that covers everything after the offset.
+
+4. Replace the original piece with those two pieces.
+
+Internal function: append to add buffer
+
+to append text to the add buffer:
+
+1. Find the end of the add buffer.
+
+2. Copy the new text there.
+
+3. Return the starting position where the text was added.

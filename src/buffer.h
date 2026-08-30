@@ -18,23 +18,25 @@ typedef struct
 
 typedef struct
 {
+    u64 len;
+    u64 capacity;
     piece *pieces;
-    int len;
 } piece_list;
 
 typedef struct
 {
-    int *line_starts; int line_count;
+    int *line_starts;
+    int line_count;
     int capacity;
 } line_cache ;
 
 typedef struct
 {
     string original;
-    string add;
+    arena add;
     string file_path;
 
-    piece_list *pieces;
+    piece_list *list;
 
     int version;
     int dirty;
@@ -45,8 +47,9 @@ typedef struct
 } buffer;
 
 buffer buffer_init(string path, string contents);
-
 void buffer_build_line_cache(buffer *b);
+void buffer_insert(buffer *b, int pos, string s);
+void buffer_delete(buffer *b, int start, int end);
 
 #endif
 

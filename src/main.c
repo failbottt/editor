@@ -23,10 +23,12 @@ int main(int argc, char **argv)
     int running = 1;
     int n;
 
-    string p = {.s = "foo/bar.txt", .len = 11};
-    string code = {.s = "hello\nworld\n", .len = 12};
+    string p = {.s = (u8*)"foo/bar.txt", .len = 11};
+    string code = {.s = (u8*)"hello\nworld\n", .len = 12};
 
     buffer b = buffer_init(p, code);
+
+    buffer_insert(&b, 0, p);
 
     while (running)
     {

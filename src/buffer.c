@@ -3,7 +3,30 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "base.h"
 #include "buffer.h"
+
+void buffer_insert(buffer *b, int pos, string s)
+{
+    if (s.s == NULL)
+    {
+        return;
+    }
+
+    u64 start = arena_append(&b->add, s.s, s.len);
+    u64 new_text_len = s.len;
+
+    if (b->list->len == 0)
+    {
+        b->list->pieces[0] = (piece){
+            .start = start,
+            .len = new_text_len,
+            .source = ADD
+        };
+        b->list->len++;
+        return;
+    }
+}
 
 void buffer_build_line_cache(buffer *b)
 {
@@ -23,18 +46,18 @@ void buffer_build_line_cache(buffer *b)
             exit(1);
         }
 
-        for (i = 0; i < b->pieces->len; i++)
+        for (i = 0; i < b->list->len; i++)
         {
-            piece p = b->pieces->pieces[i];
+            piece p = b->list->pieces[i];
 
-            string s;
+            u8* s;
             if (p.source == ADD)
             {
-                s = b->add;
+                s = b->add.data;
             }
             else if (p.source == ORIGINAL)
             {
-                s = b->original;
+                s = b->original.s;
             }
             else
             {
@@ -47,7 +70,7 @@ void buffer_build_line_cache(buffer *b)
             int pidx;
             for (pidx = p.start; pidx < p.len; pidx++)
             {
-                if (s.s[pidx] == '\n')
+                if (s[pidx] == '\n')
                 {
                     if (line_idx >= lc.capacity) {
                         int new_capacity = lc.capacity * 2;
@@ -87,20 +110,25 @@ buffer buffer_init(string path, string content)
     b.file_path = path;
     b.original = content;
 
-    b.pieces = malloc(sizeof(piece_list));
-    if (b.pieces == NULL)
+    b.add = arena_init(MB(1));
+
+    b.list = malloc(sizeof(piece_list));
+    if (b.list == NULL)
     {
         fprintf(stderr, "failed to malloc buffer piece_list\n");
         exit(1);
     }
 
-    b.pieces->pieces = malloc(sizeof(piece) * 64);
-    if (b.pieces->pieces == NULL)
+    b.list->capacity = 64;
+
+    b.list->pieces = malloc(sizeof(piece) * b.list->capacity);
+    if (b.list->pieces == NULL)
     {
         fprintf(stderr, "failed to malloc pieces\n");
         exit(1);
     }
-    b.pieces->pieces[0] = (piece){
+    b.list->len = 0;
+    b.list->pieces[0] = (piece){
         .source = ORIGINAL,
         .start = 0,
         .len = content.len

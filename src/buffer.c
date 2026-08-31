@@ -6,27 +6,227 @@
 #include "base.h"
 #include "buffer.h"
 
-void buffer_insert(buffer *b, int pos, string s)
+typedef struct
 {
-    if (s.s == NULL)
-    {
-        return;
-    }
+    u8 found;
+    u8 at_end;
+    u64 index;
+    u64 split_at;
+} piece_hit;
 
-    u64 start = arena_append(&b->add, s.s, s.len);
-    u64 new_text_len = s.len;
-
-    if (b->list->len == 0)
+static u64 piece_list_doc_length(piece_list *list)
+{
+    u64 total = 0;
+    int i = 0;
+    for (i = 0; i < list->len; i++)
     {
-        b->list->pieces[0] = (piece){
-            .start = start,
-            .len = new_text_len,
-            .source = ADD
-        };
-        b->list->len++;
-        return;
+       total += list->pieces[i].len;
     }
+    return(total);
 }
+
+static void ensure_piece_capacity(piece_list *list)
+{
+    if (list->len < list->capacity)
+    {
+        return;
+    }
+
+    u64 new_capacity = list->capacity ? list->capacity
+        * 2 : 1;
+    piece *new_pieces = realloc(list->pieces,
+            sizeof(piece) * new_capacity);
+    if (new_pieces == NULL)
+    {
+        fprintf(stderr, "failed to grow piece list\n");
+        exit(1);
+    }
+
+    list->pieces = new_pieces;
+    list->capacity = new_capacity;
+}
+
+static void insert_piece_at(piece_list *list, u64
+        index, piece p)
+{
+    ensure_piece_capacity(list);
+
+    if (index < list->len)
+    {
+        /*
+         * shift everything in the array one slot to the right.
+         */
+        memmove(
+                &list->pieces[index + 1],
+                &list->pieces[index],
+                sizeof(piece) * (list->len - index)
+               );
+    }
+
+    list->pieces[index] = p;
+    list->len++;
+}
+
+
+static piece_hit find_piece_at(u64 pos, piece_list *list)
+{
+    /*
+     * EXAMPLE:
+     *
+     * pos = 23;
+     * list = {
+     *      {.start = 0, .len = 10}
+     *      {.start = 10, .len = 5}
+     *      {.start = 15, .len = 10}
+     *      {.start = 25, .len = 10}
+     *
+     * }
+     *
+     * LOOPS:
+     *
+     * 1. piece_end = 0 + 10 = 10;
+     *    (23 IS NOT LESS THAN 10(piece_end)) SO
+     *    total_covered = 10
+     *
+     * 2. piece_end = 10 + 5 = 15
+     *    (23 IS NOT LESS THAN 15(piece_end)) SO
+     *    total_covered = 15
+     *
+     * 3. piece_end = 15 + 10 = 25
+     *    (23 IS LESS THAN 25(piece_end)) SO
+     *    found piece return it
+     */
+    u64 total_covered = 0;
+    u64 doc_len = piece_list_doc_length(list);
+
+    /* outside the range of the document */
+    if (pos > doc_len)
+    {
+        return((piece_hit){
+            .found = FALSE,
+            .at_end = FALSE,
+            .index = list->len,
+            .split_at = 0
+        });
+    }
+
+    u64 i;
+    for (i = 0; i < list->len; i++)
+    {
+        piece p = list->pieces[i];
+        u64 piece_end = total_covered + p.len;
+
+        if (pos < piece_end)
+        {
+            return((piece_hit){
+                .found = TRUE,
+                .index = i,
+                .split_at = pos - total_covered
+            });
+        }
+
+        total_covered = piece_end;
+    }
+
+    return((piece_hit){
+        .found = FALSE,
+        .index = list->len,
+        .at_end = (pos == doc_len),
+        .split_at = 0
+    });
+}
+
+void buffer_insert(buffer *b, u64 pos, string s)
+{
+  if (s.s == NULL || s.len == 0)
+  {
+      return;
+  }
+
+  u64 start = arena_append(&b->add, s.s, s.len);
+
+  if (b->list->len == 0)
+  {
+      b->list->pieces[0] = (piece){
+          .start = start,
+          .len = s.len,
+          .source = ADD
+      };
+      b->list->len = 1;
+      return;
+  }
+
+  piece_hit ph = find_piece_at(pos, b->list);
+
+  if (ph.found == FALSE)
+  {
+      if (ph.at_end == FALSE)
+      {
+          fprintf(stderr, "insert position is outside the document\n");
+          return;
+      }
+
+      insert_piece_at(b->list, b->list->len, (piece){
+          .start = start,
+          .len = s.len,
+          .source = ADD
+      });
+      return;
+  }
+
+  piece p = b->list->pieces[ph.index];
+
+  if (ph.split_at == 0)
+  {
+      insert_piece_at(b->list, ph.index, (piece){
+          .start = start,
+          .len = s.len,
+          .source = ADD
+      });
+      return;
+  }
+
+  if (ph.split_at == p.len)
+  {
+      insert_piece_at(b->list, ph.index + 1, (piece){
+          .start = start,
+          .len = s.len,
+          .source = ADD
+      });
+      return;
+  }
+
+  piece left = {
+      .start = p.start,
+      .len = ph.split_at,
+      .source = p.source
+  };
+
+  piece middle = {
+      .start = start,
+      .len = s.len,
+      .source = ADD
+  };
+
+  piece right = {
+      .start = p.start + ph.split_at,
+      .len = p.len - ph.split_at,
+      .source = p.source
+  };
+
+  ensure_piece_capacity(b->list);
+  memmove(
+      &b->list->pieces[ph.index + 3], /* dest */
+      &b->list->pieces[ph.index + 1], /* src */
+      (sizeof(piece) * (b->list->len - ph.index - 1)) /* N bytes to move */
+  );
+
+  b->list->pieces[ph.index] = left;
+  b->list->pieces[ph.index + 1] = middle;
+  b->list->pieces[ph.index + 2] = right;
+  b->list->len += 2;
+}
+
 
 void buffer_build_line_cache(buffer *b)
 {
@@ -127,12 +327,12 @@ buffer buffer_init(string path, string content)
         fprintf(stderr, "failed to malloc pieces\n");
         exit(1);
     }
-    b.list->len = 0;
     b.list->pieces[0] = (piece){
         .source = ORIGINAL,
         .start = 0,
         .len = content.len
     };
+    b.list->len = (content.len > 0) ? 1 : 0;
 
     buffer_build_line_cache(&b);
     return(b);

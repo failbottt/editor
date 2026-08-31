@@ -20,6 +20,9 @@
 #define s32 int32_t
 #define s64 int64_t
 
+#define TRUE 1
+#define FALSE 0
+
 typedef struct
 {
    u8 *s;

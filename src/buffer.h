@@ -48,8 +48,8 @@ typedef struct
 
 buffer buffer_init(string path, string contents);
 void buffer_build_line_cache(buffer *b);
-void buffer_insert(buffer *b, int pos, string s);
-void buffer_delete(buffer *b, int start, int end);
+void buffer_insert(buffer *b, u64 pos, string s);
+void buffer_delete(buffer *b, u64 start, u64 end);
 
 #endif
 

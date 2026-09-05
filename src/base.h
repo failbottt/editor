@@ -25,7 +25,7 @@
 
 typedef struct
 {
-   u8 *s;
+   u8 *data;
    u64 len;
 } string;
 
@@ -61,6 +61,8 @@ static arena arena_init(int size)
     return(r);
 }
 
+/* @todo: make this more general where any data structure
+ * can be added here. make sure to add alignment handling */
 static u64 arena_append(arena *a, u8 *data, u64 len)
 {
     if (a->data == NULL || len == 0)

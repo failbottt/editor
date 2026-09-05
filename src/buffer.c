@@ -136,20 +136,20 @@ static piece_hit find_piece_at(u64 pos, piece_list *list)
     });
 }
 
-void buffer_insert(buffer *b, u64 pos, string s)
+void buffer_insert(buffer *b, u64 pos, string str)
 {
-  if (s.s == NULL || s.len == 0)
+  if (str.data == NULL || str.data == 0)
   {
       return;
   }
 
-  u64 start = arena_append(&b->add, s.s, s.len);
+  u64 start = arena_append(&b->add, str.data, str.len);
 
   if (b->list->len == 0)
   {
       b->list->pieces[0] = (piece){
           .start = start,
-          .len = s.len,
+          .len = str.len,
           .source = ADD
       };
       b->list->len = 1;
@@ -168,7 +168,7 @@ void buffer_insert(buffer *b, u64 pos, string s)
 
       insert_piece_at(b->list, b->list->len, (piece){
           .start = start,
-          .len = s.len,
+          .len = str.len,
           .source = ADD
       });
       return;
@@ -180,7 +180,7 @@ void buffer_insert(buffer *b, u64 pos, string s)
   {
       insert_piece_at(b->list, ph.index, (piece){
           .start = start,
-          .len = s.len,
+          .len = str.len,
           .source = ADD
       });
       return;
@@ -190,7 +190,7 @@ void buffer_insert(buffer *b, u64 pos, string s)
   {
       insert_piece_at(b->list, ph.index + 1, (piece){
           .start = start,
-          .len = s.len,
+          .len = str.len,
           .source = ADD
       });
       return;
@@ -204,7 +204,7 @@ void buffer_insert(buffer *b, u64 pos, string s)
 
   piece middle = {
       .start = start,
-      .len = s.len,
+      .len = str.len,
       .source = ADD
   };
 
@@ -257,7 +257,7 @@ void buffer_build_line_cache(buffer *b)
             }
             else if (p.source == ORIGINAL)
             {
-                s = b->original.s;
+                s = b->original.data;
             }
             else
             {

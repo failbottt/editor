@@ -38,4 +38,6 @@ ${cc} ${flags} -o ${target} \
     src/main.c \
     src/input.c \
     src/term.c \
-    src/buffer.c
+    src/buffer.c \
+    src/gfx.c \
+    src/view.c

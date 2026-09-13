@@ -11,8 +11,8 @@ typedef enum
 
 typedef struct
 {
-    int start;
-    int len;
+    u64 start;
+    u64 len;
     source_type source;
 } piece;
 
@@ -25,9 +25,9 @@ typedef struct
 
 typedef struct
 {
-    int *line_starts;
-    int line_count;
-    int capacity;
+    u64 *line_starts;
+    u64 line_count;
+    u64 capacity;
 } line_cache ;
 
 typedef struct
@@ -38,8 +38,8 @@ typedef struct
 
     piece_list *list;
 
-    int version;
-    int dirty;
+    u64 version;
+    u64 dirty;
 
     line_cache lines;
     /* undo */
@@ -47,6 +47,7 @@ typedef struct
 } buffer;
 
 buffer buffer_init(string path, string contents);
+void buffer_destroy(buffer *b);
 void buffer_build_line_cache(buffer *b);
 void buffer_insert(buffer *b, u64 pos, string s);
 void buffer_delete(buffer *b, u64 start, u64 end);
@@ -76,4 +77,3 @@ void buffer_delete(buffer *b, u64 start, u64 end);
 
   bool buffer_undo(buffer_t *);
   bool buffer_redo(buffer_t *); */
-

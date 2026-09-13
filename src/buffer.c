@@ -14,10 +14,25 @@ typedef struct
     u64 split_at;
 } piece_hit;
 
+static u8 *buffer_source(buffer *b, piece *p)
+{
+    u8 *r = (u8 *)"";
+    if (p->source == ADD)
+    {
+        r = b->add.data;
+    }
+    else if (p->source == ORIGINAL)
+    {
+        r = b->original.data;
+    }
+
+    return(r);
+}
+
 static u64 piece_list_doc_length(piece_list *list)
 {
     u64 total = 0;
-    int i = 0;
+    u64 i = 0;
     for (i = 0; i < list->len; i++)
     {
        total += list->pieces[i].len;
@@ -25,15 +40,25 @@ static u64 piece_list_doc_length(piece_list *list)
     return(total);
 }
 
-static void ensure_piece_capacity(piece_list *list)
+static void ensure_piece_capacity(piece_list *list, u64 needed)
 {
-    if (list->len < list->capacity)
+    if (needed <= list->capacity)
     {
         return;
     }
 
-    u64 new_capacity = list->capacity ? list->capacity
-        * 2 : 1;
+    u64 new_capacity = list->capacity ? list->capacity : 1;
+    while (new_capacity < needed)
+    {
+        if (new_capacity > UINT64_MAX / 2)
+        {
+            fprintf(stderr, "piece list capacity overflow\n");
+            exit(1);
+        }
+
+        new_capacity *= 2;
+    }
+
     piece *new_pieces = realloc(list->pieces,
             sizeof(piece) * new_capacity);
     if (new_pieces == NULL)
@@ -49,7 +74,7 @@ static void ensure_piece_capacity(piece_list *list)
 static void insert_piece_at(piece_list *list, u64
         index, piece p)
 {
-    ensure_piece_capacity(list);
+    ensure_piece_capacity(list, list->len + 1);
 
     if (index < list->len)
     {
@@ -67,6 +92,40 @@ static void insert_piece_at(piece_list *list, u64
     list->len++;
 }
 
+static u8 pieces_touch(piece a, piece b)
+{
+    return(a.source == b.source && a.start + a.len == b.start);
+}
+
+static void merge_adjacent_pieces(piece_list *list)
+{
+    u64 read;
+    u64 write;
+
+    if (list->len < 2)
+    {
+        return;
+    }
+
+    write = 0;
+    for (read = 1; read < list->len; read++)
+    {
+        if (pieces_touch(list->pieces[write], list->pieces[read]))
+        {
+            list->pieces[write].len += list->pieces[read].len;
+        }
+        else
+        {
+            write++;
+            if (write != read)
+            {
+                list->pieces[write] = list->pieces[read];
+            }
+        }
+    }
+
+    list->len = write + 1;
+}
 
 static piece_hit find_piece_at(u64 pos, piece_list *list)
 {
@@ -138,166 +197,126 @@ static piece_hit find_piece_at(u64 pos, piece_list *list)
 
 void buffer_insert(buffer *b, u64 pos, string str)
 {
-  if (str.data == NULL || str.data == 0)
-  {
-      return;
-  }
+    piece_hit ph;
+    u64 start;
+    piece new_piece;
 
-  u64 start = arena_append(&b->add, str.data, str.len);
+    if (b == NULL || b->list == NULL || str.data == NULL || str.len == 0)
+    {
+        return;
+    }
 
-  if (b->list->len == 0)
-  {
-      b->list->pieces[0] = (piece){
-          .start = start,
-          .len = str.len,
-          .source = ADD
-      };
-      b->list->len = 1;
-      return;
-  }
+    ph = find_piece_at(pos, b->list);
+    if (ph.found == FALSE && ph.at_end == FALSE)
+    {
+        return;
+    }
 
-  piece_hit ph = find_piece_at(pos, b->list);
+    start = arena_append(&b->add, str.data, str.len);
+    new_piece = (piece){
+        .start = start,
+        .len = str.len,
+        .source = ADD
+    };
 
-  if (ph.found == FALSE)
-  {
-      if (ph.at_end == FALSE)
-      {
-          fprintf(stderr, "insert position is outside the document\n");
-          return;
-      }
+    if (b->list->len == 0 || ph.at_end)
+    {
+        insert_piece_at(b->list, b->list->len, new_piece);
+    }
+    else if (ph.split_at == 0)
+    {
+        insert_piece_at(b->list, ph.index, new_piece);
+    }
+    else
+    {
+        piece p = b->list->pieces[ph.index];
+        piece left = {
+            .start = p.start,
+            .len = ph.split_at,
+            .source = p.source
+        };
+        piece right = {
+            .start = p.start + ph.split_at,
+            .len = p.len - ph.split_at,
+            .source = p.source
+        };
 
-      insert_piece_at(b->list, b->list->len, (piece){
-          .start = start,
-          .len = str.len,
-          .source = ADD
-      });
-      return;
-  }
+        ensure_piece_capacity(b->list, b->list->len + 2);
+        memmove(
+                &b->list->pieces[ph.index + 3],
+                &b->list->pieces[ph.index + 1],
+                sizeof(piece) * (b->list->len - ph.index - 1)
+                );
 
-  piece p = b->list->pieces[ph.index];
+        b->list->pieces[ph.index] = left;
+        b->list->pieces[ph.index + 1] = new_piece;
+        b->list->pieces[ph.index + 2] = right;
+        b->list->len += 2;
+    }
 
-  if (ph.split_at == 0)
-  {
-      insert_piece_at(b->list, ph.index, (piece){
-          .start = start,
-          .len = str.len,
-          .source = ADD
-      });
-      return;
-  }
-
-  if (ph.split_at == p.len)
-  {
-      insert_piece_at(b->list, ph.index + 1, (piece){
-          .start = start,
-          .len = str.len,
-          .source = ADD
-      });
-      return;
-  }
-
-  piece left = {
-      .start = p.start,
-      .len = ph.split_at,
-      .source = p.source
-  };
-
-  piece middle = {
-      .start = start,
-      .len = str.len,
-      .source = ADD
-  };
-
-  piece right = {
-      .start = p.start + ph.split_at,
-      .len = p.len - ph.split_at,
-      .source = p.source
-  };
-
-  ensure_piece_capacity(b->list);
-  memmove(
-      &b->list->pieces[ph.index + 3], /* dest */
-      &b->list->pieces[ph.index + 1], /* src */
-      (sizeof(piece) * (b->list->len - ph.index - 1)) /* N bytes to move */
-  );
-
-  b->list->pieces[ph.index] = left;
-  b->list->pieces[ph.index + 1] = middle;
-  b->list->pieces[ph.index + 2] = right;
-  b->list->len += 2;
+    merge_adjacent_pieces(b->list);
+    buffer_build_line_cache(b);
+    b->version++;
+    b->dirty = TRUE;
 }
-
 
 void buffer_build_line_cache(buffer *b)
 {
-    int i = 0;
-    int line_idx = 0;
     line_cache lc = {0};
-    lc.line_count = 0;
+    u64 i;
+    u64 doc_pos = 0;
 
-    if (b->original.len > 0)
+    if (b == NULL || b->list == NULL)
     {
-        lc.capacity = 256;
-        lc.line_starts = malloc(sizeof(int)*lc.capacity);
-        if (lc.line_starts == NULL)
+        return;
+    }
+
+    lc.capacity = 256;
+    lc.line_starts = malloc(sizeof(u64) * lc.capacity);
+    if (lc.line_starts == NULL)
+    {
+        fprintf(stderr, "failed to malloc line cache\n");
+        exit(1);
+    }
+
+    lc.line_starts[0] = 0;
+    lc.line_count = 1;
+
+    for (i = 0; i < b->list->len; i++)
+    {
+        piece p = b->list->pieces[i];
+        u8 *s = buffer_source(b, &p);
+        u64 pidx;
+
+        for (pidx = 0; pidx < p.len; pidx++)
         {
-            /* @cleanup: logging probaby to file */
-            fprintf(stderr, "failed to malloc line cache\n");
-            exit(1);
-        }
-
-        for (i = 0; i < b->list->len; i++)
-        {
-            piece p = b->list->pieces[i];
-
-            u8* s;
-            if (p.source == ADD)
+            if (s[p.start + pidx] == '\n')
             {
-                s = b->add.data;
-            }
-            else if (p.source == ORIGINAL)
-            {
-                s = b->original.data;
-            }
-            else
-            {
-                /* @cleanup: logging probaby to file */
-                fprintf(stderr, "Unknown source type\n");
-                exit(1);
-            }
-
-
-            int pidx;
-            for (pidx = p.start; pidx < p.len; pidx++)
-            {
-                if (s[pidx] == '\n')
+                if (lc.line_count >= lc.capacity)
                 {
-                    if (line_idx >= lc.capacity) {
-                        int new_capacity = lc.capacity * 2;
-                        int *new_line_starts = malloc(sizeof(int)*new_capacity);
-                        if (new_line_starts == NULL)
-                        {
-                            /* @cleanup: logging probaby to file */
-                            fprintf(stderr, "failed to resize line cache\n");
-                            exit(1);
-                        }
-                        memcpy(new_line_starts, lc.line_starts, (sizeof(int)*lc.line_count));
-
-                        free(lc.line_starts);
-                        lc.line_starts = new_line_starts;
-                        lc.capacity = new_capacity;
+                    u64 new_capacity = lc.capacity * 2;
+                    u64 *new_line_starts = realloc(
+                            lc.line_starts,
+                            sizeof(u64) * new_capacity
+                            );
+                    if (new_line_starts == NULL)
+                    {
+                        fprintf(stderr, "failed to resize line cache\n");
+                        exit(1);
                     }
 
-                    /* @nocheckin */
-                    fprintf(stdout, "%d", (i+1));
-
-                    lc.line_starts[line_idx++] = i+1;
-                    lc.line_count++;
+                    lc.line_starts = new_line_starts;
+                    lc.capacity = new_capacity;
                 }
-            }
 
+                lc.line_starts[lc.line_count++] = doc_pos + pidx + 1;
+            }
         }
+
+        doc_pos += p.len;
     }
+
+    free(b->lines.line_starts);
 
     b->lines = lc;
 
@@ -320,6 +339,7 @@ buffer buffer_init(string path, string content)
     }
 
     b.list->capacity = 64;
+    b.list->len = 0;
 
     b.list->pieces = malloc(sizeof(piece) * b.list->capacity);
     if (b.list->pieces == NULL)
@@ -336,4 +356,155 @@ buffer buffer_init(string path, string content)
 
     buffer_build_line_cache(&b);
     return(b);
+}
+
+void buffer_destroy(buffer *b)
+{
+    if (b == NULL)
+    {
+        return;
+    }
+
+    free(b->add.data);
+    b->add.data = NULL;
+    b->add.capacity = 0;
+    b->add.pos = 0;
+    b->add.prev_pos = 0;
+
+    if (b->list != NULL)
+    {
+        free(b->list->pieces);
+        b->list->pieces = NULL;
+        free(b->list);
+        b->list = NULL;
+    }
+
+    free(b->lines.line_starts);
+    b->lines.line_starts = NULL;
+    b->lines.line_count = 0;
+    b->lines.capacity = 0;
+}
+
+void buffer_delete(buffer *b, u64 start, u64 end)
+{
+    if (start >= end)
+    {
+        return;
+    }
+
+    piece_list *list;
+
+    if (b == NULL || b->list == NULL)
+    {
+        return;
+    }
+
+    list = b->list;
+
+    u64 doc_len = piece_list_doc_length(list);
+
+    if (start > doc_len || end > doc_len)
+    {
+        return;
+    }
+
+    piece_hit start_ph = find_piece_at(start, list);
+    piece_hit end_ph = find_piece_at(end, list);
+
+    if (start_ph.found == FALSE)
+    {
+        return;
+    }
+
+    if (end_ph.found && start_ph.index == end_ph.index)
+    {
+        piece p = list->pieces[start_ph.index];
+        u64 left_len = start_ph.split_at;
+        u64 right_len = p.len - end_ph.split_at;
+
+        if (left_len == 0 && right_len == 0)
+        {
+            memmove(
+                    &list->pieces[start_ph.index],
+                    &list->pieces[start_ph.index + 1],
+                    sizeof(piece) * (list->len - start_ph.index - 1)
+                    );
+            list->len--;
+        }
+        else if (left_len == 0)
+        {
+            list->pieces[start_ph.index].start = p.start + end_ph.split_at;
+            list->pieces[start_ph.index].len = right_len;
+        }
+        else if (right_len == 0)
+        {
+            list->pieces[start_ph.index].len = left_len;
+        }
+        else
+        {
+            ensure_piece_capacity(list, list->len + 1);
+            memmove(
+                    &list->pieces[start_ph.index + 2],
+                    &list->pieces[start_ph.index + 1],
+                    sizeof(piece) * (list->len - start_ph.index - 1)
+                    );
+            list->pieces[start_ph.index] = (piece){
+                .start = p.start,
+                .len = left_len,
+                .source = p.source
+            };
+            list->pieces[start_ph.index + 1] = (piece){
+                .start = p.start + end_ph.split_at,
+                .len = right_len,
+                .source = p.source
+            };
+            list->len++;
+        }
+
+        merge_adjacent_pieces(list);
+        buffer_build_line_cache(b);
+        b->version++;
+        b->dirty = TRUE;
+        return;
+    }
+
+    {
+        u64 dst = start_ph.index;
+        u64 src = list->len;
+        u64 tail_count;
+
+        if (start_ph.split_at > 0)
+        {
+            list->pieces[start_ph.index].len = start_ph.split_at;
+            dst = start_ph.index + 1;
+        }
+
+        if (end_ph.found)
+        {
+            if (end_ph.split_at > 0)
+            {
+                list->pieces[end_ph.index].start += end_ph.split_at;
+                list->pieces[end_ph.index].len -= end_ph.split_at;
+            }
+
+            src = end_ph.index;
+        }
+
+        tail_count = list->len - src;
+
+        memmove(
+                &list->pieces[dst],
+                &list->pieces[src],
+                sizeof(piece) * tail_count
+                );
+
+        list->len = dst + tail_count;
+    }
+
+    merge_adjacent_pieces(list);
+    buffer_build_line_cache(b);
+    b->version++;
+    b->dirty = TRUE;
+
+    return;
 }

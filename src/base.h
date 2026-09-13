@@ -23,11 +23,22 @@
 #define TRUE 1
 #define FALSE 0
 
+/*
+ * string
+ * ---
+ */
 typedef struct
 {
    u8 *data;
    u64 len;
 } string;
+
+#define STR(x) (string){.data = (u8*)x, .len = strlen(x)}
+
+/*
+ * strings end
+ * ---
+ */
 
 typedef struct
 {

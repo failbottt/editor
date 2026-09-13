@@ -9,7 +9,7 @@ if [[ "${test:-0}" == "1" ]]; then
     cc_debug="-g"
     target="build/tests"
     flags="${cc_debug} -std=c89"
-    ${cc} ${flags} -o ${target} ./tests/main.c
+    ${cc} ${flags} -o ${target} ./tests/main.c ./src/buffer.c
     exit
 fi
 
@@ -18,6 +18,13 @@ if [[ ! -d "./build" ]]; then
 else
     rm -rf ./build
     mkdir ./build
+fi
+
+if [[ "${scratch:-0}" == "1" ]]; then
+    ${cc} -g -std=c89 -o ./build/scratch \
+        src/scratch.c \
+        src/buffer.c
+    exit
 fi
 
 cc_sanitize=""

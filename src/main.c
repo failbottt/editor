@@ -45,11 +45,15 @@ int main(int argc, char **argv)
         sprintf((char *)b2, "%c", k.value);
 
         string s_tmp = {.data = b2, .len = 1};
-        buffer_insert(current_buffer, 0, s_tmp);
+        buffer_insert(current_buffer, cursor, s_tmp);
+        cursor++;
     }
 
     gfx_draw_text((u8*)"\x1b[0m", 4);
     gfx_cleanup();
+
+    buffer_destroy(&E.buffers[0]);
+    free(E.buffers);
 
     return 0;
 }

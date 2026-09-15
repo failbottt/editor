@@ -278,15 +278,15 @@ void buffer_build_line_cache(buffer *b)
     }
 
     lc.capacity = 256;
-    lc.line_starts = malloc(sizeof(u64) * lc.capacity);
-    if (lc.line_starts == NULL)
+    lc.indexes = malloc(sizeof(u64) * lc.capacity);
+    if (lc.indexes == NULL)
     {
         fprintf(stderr, "failed to malloc line cache\n");
         exit(1);
     }
 
-    lc.line_starts[0] = 0;
-    lc.line_count = 1;
+    lc.indexes[0] = 0;
+    lc.len = 1;
 
     for (i = 0; i < b->list->len; i++)
     {
@@ -298,11 +298,11 @@ void buffer_build_line_cache(buffer *b)
         {
             if (s[p.start + pidx] == '\n')
             {
-                if (lc.line_count >= lc.capacity)
+                if (lc.len >= lc.capacity)
                 {
                     u64 new_capacity = lc.capacity * 2;
                     u64 *new_line_starts = realloc(
-                            lc.line_starts,
+                            lc.indexes,
                             sizeof(u64) * new_capacity
                             );
                     if (new_line_starts == NULL)
@@ -311,20 +311,20 @@ void buffer_build_line_cache(buffer *b)
                         exit(1);
                     }
 
-                    lc.line_starts = new_line_starts;
+                    lc.indexes = new_line_starts;
                     lc.capacity = new_capacity;
                 }
 
-                lc.line_starts[lc.line_count++] = doc_pos + pidx + 1;
+                lc.indexes[lc.len++] = doc_pos + pidx + 1;
             }
         }
 
         doc_pos += p.len;
     }
 
-    free(b->lines.line_starts);
+    free(b->cached_line_starts.indexes);
 
-    b->lines = lc;
+    b->cached_line_starts = lc;
 
     return;
 }
@@ -385,10 +385,10 @@ void buffer_destroy(buffer *b)
         b->list = NULL;
     }
 
-    free(b->lines.line_starts);
-    b->lines.line_starts = NULL;
-    b->lines.line_count = 0;
-    b->lines.capacity = 0;
+    free(b->cached_line_starts.indexes);
+    b->cached_line_starts.indexes = NULL;
+    b->cached_line_starts.len = 0;
+    b->cached_line_starts.capacity = 0;
 }
 
 void buffer_delete(buffer *b, u64 start, u64 end)
@@ -517,36 +517,32 @@ void buffer_delete(buffer *b, u64 start, u64 end)
 
 cursor_pos buffer_offset_to_screen_pos(buffer *b, u64 offset)
 {
-    cursor_pos cursor = {0, 0};
+    /* the term grid is 1 based not 0 based */
+    cursor_pos cursor = {.x = 1, .y = 1};
 
-    if (offset == 0)
+    u64 x;
+    u64 y;
+
+    u64 i;
+    for (i = 0; i < b->cached_line_starts.len; i++)
     {
-        return(cursor);
-    }
-
-    u64 x = 0;
-    u64 y = 0;
-
-    int i;
-    for (i = 0; i < b->lines.line_count; i++)
-    {
-        if (offset < b->lines.line_starts[i])
+        if (offset < b->cached_line_starts.indexes[i])
         {
             y = i;
             break;
         }
     }
 
-    x = b->lines.line_starts[y-1] + offset;
+    x = b->cached_line_starts.indexes[cursor.y-1] + offset;
 
-    if (x < 0)
+    if (x < 1)
     {
-        x = 0;
+        x++;
     }
 
-    if (y > b->lines.line_starts[b->lines.line_count-1])
+    if (y > b->cached_line_starts.indexes[b->cached_line_starts.len-1])
     {
-        y = b->lines.line_count;
+        y = b->cached_line_starts.len;
     }
 
     cursor.x = x;

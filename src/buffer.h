@@ -25,8 +25,8 @@ typedef struct
 
 typedef struct
 {
-    u64 *line_starts;
-    u64 line_count;
+    u64 *indexes;
+    u64 len;
     u64 capacity;
 } line_cache ;
 
@@ -41,7 +41,7 @@ typedef struct buffer
     u64 version;
     u64 dirty;
 
-    line_cache lines;
+    line_cache cached_line_starts;
     /* undo */
     /* redo */
 } buffer;

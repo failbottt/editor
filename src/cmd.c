@@ -4,18 +4,63 @@
 
 void cmd_move_cursor_right()
 {
-    /*
-     * cases:
-     * 1. The cursor is at offset 0, but hte doc length is zero
-     * 2. The cursor is at offset 0, the the doc length is not zero
-     * 3. the cursor is at the end of the document
-     */
+    u64 cursor_offset = E.cursor_offset;
+    buffer *b = E.active_buffer;
 
-    u64 doc_length = buffer_document_length(E.active_buffer);
+    u64 doc_length = buffer_document_length(b);
 
-    if (E.cursor_offset == 0 && doc_length == 0)
+    if (cursor_offset == 0 && doc_length == 0)
     {
         return;
     }
 
+    if (cursor_offset == 0 && doc_length > 0)
+    {
+        E.cursor_offset++;
+        return;
+    }
+
+    u64 i;
+
+    for (i = 0; i < b->cached_line_starts.len; i++)
+    {
+        u64 start = b->cached_line_starts.indexes[i];
+
+        /*
+         *
+         */
+        u8 next_char_is_end_of_line = ((cursor_offset+1) == start);
+        if (next_char_is_end_of_line)
+        {
+            return;
+        }
+    }
+
+    E.cursor_offset++;
+}
+
+void cmd_move_cursor_left()
+{
+    u64 cursor_offset = E.cursor_offset;
+    buffer *b = E.active_buffer;
+
+    if (cursor_offset == 0)
+    {
+        return;
+    }
+
+    int i;
+
+    for(i = b->cached_line_starts.len - 1; i > 0; i--)
+    {
+        u64 start = b->cached_line_starts.indexes[i];
+
+        u8 prev_char_is_end_of_line = ((cursor_offset-1) == start);
+        if (prev_char_is_end_of_line)
+        {
+            return;
+        }
+    }
+
+    E.cursor_offset--;
 }

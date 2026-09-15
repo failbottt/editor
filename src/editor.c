@@ -43,6 +43,12 @@ void editor_process_normal_mode_key(key k)
         case KEY_L_LOWER:
         {
             cmd_move_cursor_right();
+            break;
+        }
+        case KEY_H_LOWER:
+        {
+            cmd_move_cursor_left();
+            break;
         }
     }
 }

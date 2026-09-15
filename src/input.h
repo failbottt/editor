@@ -2,12 +2,13 @@
 #define INPUT_H
 
 #include "keydefs.h"
+#include "base.h"
 
 typedef struct
 {
-    int value;
+    u64 value;
 } key;
 
-key getkey();
+key input_get_key();
 
 #endif

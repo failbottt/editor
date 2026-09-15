@@ -30,7 +30,7 @@ typedef struct
     u64 capacity;
 } line_cache ;
 
-typedef struct
+typedef struct buffer
 {
     string original;
     arena add;
@@ -51,6 +51,8 @@ void buffer_destroy(buffer *b);
 void buffer_build_line_cache(buffer *b);
 void buffer_insert(buffer *b, u64 pos, string s);
 void buffer_delete(buffer *b, u64 start, u64 end);
+cursor_pos buffer_offset_to_screen_pos(buffer *b, u64 doc_offset);
+u64 buffer_document_length(buffer *b);
 
 #endif
 

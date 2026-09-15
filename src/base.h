@@ -23,6 +23,13 @@
 #define TRUE 1
 #define FALSE 0
 
+typedef struct
+{
+   u64 x;
+   u64 y;
+} cursor_pos;
+
+
 /*
  * string
  * ---

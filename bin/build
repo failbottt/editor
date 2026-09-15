@@ -23,7 +23,10 @@ fi
 if [[ "${scratch:-0}" == "1" ]]; then
     ${cc} -g -std=c89 -o ./build/scratch \
         src/scratch.c \
-        src/buffer.c
+        src/buffer.c \
+        src/term.c \
+        src/input.c \
+        src/gfx.c
     exit
 fi
 
@@ -43,8 +46,10 @@ flags="${cc_sanitize} ${cc_debug} -std=c89"
 
 ${cc} ${flags} -o ${target} \
     src/main.c \
+    src/editor.c \
     src/input.c \
     src/term.c \
     src/buffer.c \
     src/gfx.c \
-    src/view.c
+    src/view.c \
+    src/cmd.c

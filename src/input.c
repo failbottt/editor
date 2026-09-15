@@ -2,7 +2,7 @@
 
 #include "input.h"
 
-key getkey()
+key input_get_key()
 {
     char b[32];
     int n = read(STDIN_FILENO, &b, sizeof(b));
@@ -13,3 +13,5 @@ key getkey()
     key r = {.value = *b};
     return(r);
 }
+
+

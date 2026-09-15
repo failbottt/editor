@@ -1,7 +1,12 @@
 #include "view.h"
 
-void view_draw(buffer *b)
+void view_draw(view *v)
 {
+    buffer *b = v->b;
+
+    u64 x = 1;
+    u64 y = 1;
+
     u64 i;
     for (i = 0; i < b->list->len; i++)
     {
@@ -17,10 +22,20 @@ void view_draw(buffer *b)
             out = b->add.data;
         }
 
-        u64 j;
+        int j;
         for (j = p.start; j < p.start + p.len; j++)
         {
-            gfx_draw_text(out+j, 1);
+            u8 *c = &out[j];
+            if (*c == '\n')
+            {
+                x = 1;
+                y++;
+                term_set_cursor_pos(x, y);
+                continue;
+            }
+            term_set_cursor_pos(x, y);
+            gfx_draw_text(c, 1);
+            x++;
         }
     }
 }

@@ -5,6 +5,7 @@
 
 #include "base.h"
 #include "buffer.h"
+#include "editor.h"
 
 typedef struct
 {
@@ -38,6 +39,11 @@ static u64 piece_list_doc_length(piece_list *list)
        total += list->pieces[i].len;
     }
     return(total);
+}
+
+u64 buffer_document_length(buffer *b)
+{
+    return piece_list_doc_length(b->list);
 }
 
 static void ensure_piece_capacity(piece_list *list, u64 needed)
@@ -507,4 +513,44 @@ void buffer_delete(buffer *b, u64 start, u64 end)
     b->dirty = TRUE;
 
     return;
+}
+
+cursor_pos buffer_offset_to_screen_pos(buffer *b, u64 offset)
+{
+    cursor_pos cursor = {0, 0};
+
+    if (offset == 0)
+    {
+        return(cursor);
+    }
+
+    u64 x = 0;
+    u64 y = 0;
+
+    int i;
+    for (i = 0; i < b->lines.line_count; i++)
+    {
+        if (offset < b->lines.line_starts[i])
+        {
+            y = i;
+            break;
+        }
+    }
+
+    x = b->lines.line_starts[y-1] + offset;
+
+    if (x < 0)
+    {
+        x = 0;
+    }
+
+    if (y > b->lines.line_starts[b->lines.line_count-1])
+    {
+        y = b->lines.line_count;
+    }
+
+    cursor.x = x;
+    cursor.y = y;
+
+    return(cursor);
 }

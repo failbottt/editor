@@ -3,40 +3,43 @@
 
 #include "base.h"
 #include "buffer.h"
+#include "gfx.h"
+#include "input.h"
+
+static void test_cursor_and_input()
+{
+    gfx_init();
+    u64 x = 1;
+    u64 y = 1;
+
+    while(1)
+    {
+        key k = input_get_key();
+        if (k.value == KEY_ESCAPE)
+        {
+            break;
+        }
+        else if (k.value == KEY_RETURN)
+        {
+            x = 1;
+            y++;
+            term_set_cursor_pos(x, y);
+            continue;
+        }
+
+        term_set_cursor_pos(x, y);
+
+        gfx_draw_text("A", 1);
+        x++;
+    }
+
+    gfx_cleanup();
+}
 
 int main()
 {
-
-    buffer b = buffer_init(STR("/path/to/file"), STR("foo bar"));
-
-    buffer_insert(&b, 4, STR("hello world "));
-
-    buffer_insert(&b, 16, STR("guy"));
-
-    buffer_insert(&b, 19, STR("baz<SPACE>"));
-
-    buffer_delete(&b, 10, 29);
-
-    piece_list *list = b.list;
-    int i;
-    for (i = 0; i < list->len; i++)
-    {
-        piece p = list->pieces[i];
-
-        u8 *src = NULL;
-        if (p.source == ADD)
-        {
-            src = b.add.data;
-        }
-        else if (p.source == ORIGINAL)
-        {
-            src = b.original.data;
-        }
-
-        write(STDOUT_FILENO, (const char*)src+p.start, sizeof(u8) * p.len);
-    }
-
-    fprintf(stdout, "\n");
+    /* test_cursor_and_input(); */
 
     return 0;
 }
+

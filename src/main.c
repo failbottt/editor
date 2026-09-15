@@ -2,6 +2,8 @@
 #include <unistd.h>
 #include <stdio.h>
 
+#include "base.h"
+
 #include "input.h"
 #include "term.h"
 #include "buffer.h"
@@ -9,49 +11,70 @@
 #include "gfx.h"
 #include "view.h"
 
+editor E = (editor){0};
+
 int main(int argc, char **argv)
 {
     gfx_init();
 
     string p = {.data = (u8*)"foo/bar.txt", .len = 11};
-    string code = {.data = (u8*)"helloworld", .len = 10};
+
+    u8 *d = (u8*)"";
+    string code = {.data = d, .len = strlen(d)};
 
     buffer b = buffer_init(p, code);
 
-    editor E = (editor){0};
+    E.mode = NORMAL;
     E.running = 1;
-    E.buffers = (buffer *)malloc(sizeof(buffer)*2);
-    E.buffers[0] = b;
-    E.current_buffer = 0;
+    E.cursor_offset = 0;
 
-    u64 cursor = b.list->pieces[0].len;
+    buffer *buffers = (buffer *)malloc(sizeof(buffer)*1);
+    if (buffers == NULL)
+    {
+        fprintf(stderr, "[error]: Unable to malloc buffers");
+        exit(1);
+    }
+    E.buffers = buffers;
+
+    E.buffers[0] = b;
+
+    E.active_buffer = &E.buffers[0];
+
+    view *views = (view*)malloc(sizeof(*views)*1);
+    if (views == NULL)
+    {
+        fprintf(stderr, "[error]: Unable to malloc views");
+        exit(1);
+    }
+    E.views = views;
+
+    E.views[0].b = E.active_buffer;
+
     while (E.running)
     {
         term_cursor_to_home();
         gfx_clear_screen();
 
-        buffer *current_buffer = &E.buffers[E.current_buffer];
+        term_hide_cursor();
 
-        view_draw(current_buffer);
-        key k = getkey();
+        view *current_view = &E.views[0];
 
-        if (k.value == KEY_ESCAPE)
-        {
-            E.running = 0;
-            break;
-        }
+        view_draw(current_view);
 
-        u8 b2[128];
-        sprintf((char *)b2, "%c", k.value);
+        cursor_pos cursor = buffer_offset_to_screen_pos(
+                current_view->b,
+                E.cursor_offset
+                );
 
-        string s_tmp = {.data = b2, .len = 1};
-        buffer_insert(current_buffer, cursor, s_tmp);
-        cursor++;
+        term_set_cursor_pos(cursor.x, cursor.y);
+        term_show_cursor();
+
+        key k = input_get_key();
+
+        editor_process_input(k);
     }
 
-    gfx_draw_text((u8*)"\x1b[0m", 4);
     gfx_cleanup();
-
     buffer_destroy(&E.buffers[0]);
     free(E.buffers);
 

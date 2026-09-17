@@ -50,6 +50,7 @@ int main(int argc, char **argv)
 
     E.views[0].b = E.active_buffer;
 
+
     while (E.running)
     {
         term_cursor_to_home();
@@ -67,11 +68,13 @@ int main(int argc, char **argv)
                 );
 
         term_set_cursor_pos(cursor.x, cursor.y);
+
         term_show_cursor();
 
         key k = input_get_key();
 
         editor_process_input(k);
+
     }
 
     gfx_cleanup();

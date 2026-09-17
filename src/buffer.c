@@ -7,14 +7,6 @@
 #include "buffer.h"
 #include "editor.h"
 
-typedef struct
-{
-    u8 found;
-    u8 at_end;
-    u64 index;
-    u64 split_at;
-} piece_hit;
-
 static u8 *buffer_source(buffer *b, piece *p)
 {
     u8 *r = (u8 *)"";
@@ -268,7 +260,7 @@ void buffer_insert(buffer *b, u64 pos, string str)
 
 void buffer_build_line_cache(buffer *b)
 {
-    line_cache lc = {0};
+    line_cache line_endings = {0};
     u64 i;
     u64 doc_pos = 0;
 
@@ -277,16 +269,16 @@ void buffer_build_line_cache(buffer *b)
         return;
     }
 
-    lc.capacity = 256;
-    lc.indexes = malloc(sizeof(u64) * lc.capacity);
-    if (lc.indexes == NULL)
+    line_endings.capacity = 256;
+    line_endings.offsets = malloc(sizeof(u64) * line_endings.capacity);
+    if (line_endings.offsets == NULL)
     {
         fprintf(stderr, "failed to malloc line cache\n");
         exit(1);
     }
 
-    lc.indexes[0] = 0;
-    lc.len = 1;
+    line_endings.offsets[0] = 0;
+    line_endings.len = 1;
 
     for (i = 0; i < b->list->len; i++)
     {
@@ -298,11 +290,11 @@ void buffer_build_line_cache(buffer *b)
         {
             if (s[p.start + pidx] == '\n')
             {
-                if (lc.len >= lc.capacity)
+                if (line_endings.len >= line_endings.capacity)
                 {
-                    u64 new_capacity = lc.capacity * 2;
+                    u64 new_capacity = line_endings.capacity * 2;
                     u64 *new_line_starts = realloc(
-                            lc.indexes,
+                            line_endings.offsets,
                             sizeof(u64) * new_capacity
                             );
                     if (new_line_starts == NULL)
@@ -311,20 +303,20 @@ void buffer_build_line_cache(buffer *b)
                         exit(1);
                     }
 
-                    lc.indexes = new_line_starts;
-                    lc.capacity = new_capacity;
+                    line_endings.offsets = new_line_starts;
+                    line_endings.capacity = new_capacity;
                 }
 
-                lc.indexes[lc.len++] = doc_pos + pidx + 1;
+                line_endings.offsets[line_endings.len++] = doc_pos + pidx + 1;
             }
         }
 
         doc_pos += p.len;
     }
 
-    free(b->cached_line_starts.indexes);
+    free(b->cached_line_starts.offsets);
 
-    b->cached_line_starts = lc;
+    b->cached_line_starts = line_endings;
 
     return;
 }
@@ -385,8 +377,8 @@ void buffer_destroy(buffer *b)
         b->list = NULL;
     }
 
-    free(b->cached_line_starts.indexes);
-    b->cached_line_starts.indexes = NULL;
+    free(b->cached_line_starts.offsets);
+    b->cached_line_starts.offsets = NULL;
     b->cached_line_starts.len = 0;
     b->cached_line_starts.capacity = 0;
 }
@@ -515,38 +507,81 @@ void buffer_delete(buffer *b, u64 start, u64 end)
     return;
 }
 
+struct line buffer_line_length(buffer *b, u64 offset)
+{
+    struct line line = (struct line){0};
+
+    cursor_pos cursor = buffer_offset_to_screen_pos(b, offset);
+
+    line.end = b->cached_line_starts.offsets[cursor.y];
+
+    if (cursor.y == 0)
+    {
+        line.start = 0;
+    }
+    else if (cursor.y != b->cached_line_starts.len)
+    {
+        line.start = b->cached_line_starts.offsets[cursor.y-1];
+    }
+    else
+    {
+        u64 foo = 1;
+    }
+
+    line.len = line.end - line.start;
+
+    return(line);
+}
+
 cursor_pos buffer_offset_to_screen_pos(buffer *b, u64 offset)
 {
-    /* the term grid is 1 based not 0 based */
-    cursor_pos cursor = {.x = 1, .y = 1};
-
-    u64 x;
-    u64 y;
-
+    cursor_pos cursor = {0};
+    u64 doc_len;
+    u64 line_index;
+    u64 line_start;
     u64 i;
-    for (i = 0; i < b->cached_line_starts.len; i++)
+
+    if (b == NULL || b->cached_line_starts.len == 0)
     {
-        if (offset < b->cached_line_starts.indexes[i])
+        cursor.x = 1;
+        cursor.y = 1;
+        return(cursor);
+    }
+
+    doc_len = buffer_document_length(b);
+    if (offset > doc_len)
+    {
+        offset = doc_len;
+    }
+
+    line_index = 0;
+    line_start = b->cached_line_starts.offsets[0];
+
+    /* @note: terminal is row, col and starts at 1,1 */
+    for (i = 1; i < b->cached_line_starts.len; i++)
+    {
+        u64 start = b->cached_line_starts.offsets[i];
+
+        if (offset < start)
         {
-            y = i;
             break;
         }
+
+        line_index = i;
+        line_start = start;
     }
 
-    x = b->cached_line_starts.indexes[cursor.y-1] + offset;
+    cursor.x = offset - line_start + 1;
 
-    if (x < 1)
+    if (line_index == b->cached_line_starts.len)
     {
-        x++;
+        cursor.y = line_index;
     }
-
-    if (y > b->cached_line_starts.indexes[b->cached_line_starts.len-1])
+    else
     {
-        y = b->cached_line_starts.len;
+        cursor.y = line_index + 1;
     }
 
-    cursor.x = x;
-    cursor.y = y;
 
     return(cursor);
 }

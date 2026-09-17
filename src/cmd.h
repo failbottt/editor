@@ -3,5 +3,7 @@
 
 void cmd_move_cursor_right();
 void cmd_move_cursor_left();
+void cmd_move_cursor_down();
+void cmd_move_cursor_up();
 
 #endif

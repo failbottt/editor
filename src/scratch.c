@@ -6,6 +6,11 @@
 #include "gfx.h"
 #include "input.h"
 
+struct foo
+{
+    int x;
+};
+
 static void test_cursor_and_input()
 {
     gfx_init();
@@ -39,6 +44,8 @@ static void test_cursor_and_input()
 int main()
 {
     /* test_cursor_and_input(); */
+
+    struct foo foo = {0};
 
     return 0;
 }

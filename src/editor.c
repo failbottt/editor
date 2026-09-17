@@ -50,6 +50,16 @@ void editor_process_normal_mode_key(key k)
             cmd_move_cursor_left();
             break;
         }
+        case KEY_J_LOWER:
+        {
+            cmd_move_cursor_down();
+            break;
+        }
+        case KEY_K_LOWER:
+        {
+            cmd_move_cursor_up();
+            break;
+        }
     }
 }
 

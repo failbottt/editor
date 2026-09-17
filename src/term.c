@@ -83,8 +83,6 @@ void term_show_cursor()
 void term_set_cursor_pos(u64 x, u64 y)
 {
     /* @note: terminal is row, col and 1, 1 based not 0,0 */
-
-    fprintf(stderr, "(x: %ld ,y: %ld)\n", x, y);
     /* @note: two 64 bit numbers is up to 40 digits */
     u8 b[64];
 

@@ -25,10 +25,25 @@ typedef struct
 
 typedef struct
 {
-    u64 *indexes;
+    u64 *offsets;
     u64 len;
     u64 capacity;
 } line_cache ;
+
+struct line
+{
+    u64 start;
+    u64 end;
+    u64 len;
+};
+
+typedef struct
+{
+    u8 found;
+    u8 at_end;
+    u64 index;
+    u64 split_at;
+} piece_hit;
 
 typedef struct buffer
 {
@@ -51,31 +66,8 @@ void buffer_destroy(buffer *b);
 void buffer_build_line_cache(buffer *b);
 void buffer_insert(buffer *b, u64 pos, string s);
 void buffer_delete(buffer *b, u64 start, u64 end);
-cursor_pos buffer_offset_to_screen_pos(buffer *b, u64 doc_offset);
+cursor_pos buffer_offset_to_screen_pos(buffer *b, u64 offset);
 u64 buffer_document_length(buffer *b);
+struct line buffer_line_length(buffer *b, u64 offset);
 
 #endif
-
-/*  buffer_t *buffer_load(path, contents);
-  int buffer_save(buffer_t *, path);
-
-  buffer_version_t buffer_version(buffer_t *);
-
-  buffer_range_t buffer_replace(buffer_t *, buffer_pos_t start,
-  buffer_pos_t end, string text);
-  buffer_range_t buffer_insert(buffer_t *, buffer_pos_t pos,
-  string text);
-  buffer_range_t buffer_delete(buffer_t *, buffer_pos_t start,
-  buffer_pos_t end);
-
-  string_view buffer_slice(buffer_t *, buffer_pos_t start,
-  buffer_pos_t end);
-
-  buffer_pos_t buffer_offset_to_pos(buffer_t *, size_t offset);
-  size_t buffer_pos_to_offset(buffer_t *, buffer_pos_t pos);
-
-  size_t buffer_len(buffer_t *);
-  size_t buffer_line_count(buffer_t *);
-
-  bool buffer_undo(buffer_t *);
-  bool buffer_redo(buffer_t *); */

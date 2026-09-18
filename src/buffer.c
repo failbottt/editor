@@ -260,7 +260,7 @@ void buffer_insert(buffer *b, u64 pos, string str)
 
 void buffer_build_line_cache(buffer *b)
 {
-    line_cache line_endings = {0};
+    line_cache line_starts = {0};
     u64 i;
     u64 doc_pos = 0;
 
@@ -269,16 +269,16 @@ void buffer_build_line_cache(buffer *b)
         return;
     }
 
-    line_endings.capacity = 256;
-    line_endings.offsets = malloc(sizeof(u64) * line_endings.capacity);
-    if (line_endings.offsets == NULL)
+    line_starts.capacity = 256;
+    line_starts.offsets = malloc(sizeof(u64) * line_starts.capacity);
+    if (line_starts.offsets == NULL)
     {
         fprintf(stderr, "failed to malloc line cache\n");
         exit(1);
     }
 
-    line_endings.offsets[0] = 0;
-    line_endings.len = 1;
+    line_starts.offsets[0] = 0;
+    line_starts.len = 1;
 
     for (i = 0; i < b->list->len; i++)
     {
@@ -290,11 +290,11 @@ void buffer_build_line_cache(buffer *b)
         {
             if (s[p.start + pidx] == '\n')
             {
-                if (line_endings.len >= line_endings.capacity)
+                if (line_starts.len >= line_starts.capacity)
                 {
-                    u64 new_capacity = line_endings.capacity * 2;
+                    u64 new_capacity = line_starts.capacity * 2;
                     u64 *new_line_starts = realloc(
-                            line_endings.offsets,
+                            line_starts.offsets,
                             sizeof(u64) * new_capacity
                             );
                     if (new_line_starts == NULL)
@@ -303,11 +303,11 @@ void buffer_build_line_cache(buffer *b)
                         exit(1);
                     }
 
-                    line_endings.offsets = new_line_starts;
-                    line_endings.capacity = new_capacity;
+                    line_starts.offsets = new_line_starts;
+                    line_starts.capacity = new_capacity;
                 }
 
-                line_endings.offsets[line_endings.len++] = doc_pos + pidx + 1;
+                line_starts.offsets[line_starts.len++] = doc_pos + pidx + 1;
             }
         }
 
@@ -316,7 +316,7 @@ void buffer_build_line_cache(buffer *b)
 
     free(b->cached_line_starts.offsets);
 
-    b->cached_line_starts = line_endings;
+    b->cached_line_starts = line_starts;
 
     return;
 }
@@ -510,24 +510,48 @@ void buffer_delete(buffer *b, u64 start, u64 end)
 struct line buffer_line_length(buffer *b, u64 offset)
 {
     struct line line = (struct line){0};
+    u64 doc_len;
+    u64 lo;
+    u64 hi;
+    u64 line_index;
 
-    cursor_pos cursor = buffer_offset_to_screen_pos(b, offset);
-
-    line.end = b->cached_line_starts.offsets[cursor.y];
-
-    if (cursor.y == 0)
+    if (b == NULL || b->cached_line_starts.len == 0)
     {
-        line.start = 0;
+        return(line);
     }
-    else if (cursor.y != b->cached_line_starts.len)
+
+    doc_len = buffer_document_length(b);
+    if (offset > doc_len)
     {
-        line.start = b->cached_line_starts.offsets[cursor.y-1];
+        offset = doc_len;
+    }
+
+    lo = 0;
+    hi = b->cached_line_starts.len;
+    while (lo + 1 < hi)
+    {
+        u64 mid = lo + (hi - lo) / 2;
+
+        if (b->cached_line_starts.offsets[mid] <= offset)
+        {
+            lo = mid;
+        }
+        else
+        {
+            hi = mid;
+        }
+    }
+
+    line_index = lo;
+    line.start = b->cached_line_starts.offsets[line_index];
+    if (line_index + 1 < b->cached_line_starts.len)
+    {
+        line.end = b->cached_line_starts.offsets[line_index + 1] - 1;
     }
     else
     {
-        u64 foo = 1;
+        line.end = doc_len;
     }
-
     line.len = line.end - line.start;
 
     return(line);

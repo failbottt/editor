@@ -7,5 +7,7 @@ void term_enter_alt_screen();
 void term_leave_alt_screen();
 void term_hide_cursor();
 void term_show_cursor();
+void term_cursor_as_block();
+void term_cursor_as_line();
 
 #endif

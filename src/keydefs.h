@@ -2,7 +2,10 @@
 #define KEYDEFS_H
 
 /* https://vt100.net/docs/vt100-ug/chapter3.html */
-/* F1-FN aren't supported till vt200-300, however F1-F5 aren't sent because they would have been host function keys that did not get sent to the mainframe */
+/* F1-FN aren't supported till vt200-300, however F1-F5 aren't
+ * sent because they would have been host function keys that
+ * did not get sent to the mainframe
+ * */
 
 #define CTRL_SPACE               0x00  /* NUL */
 
@@ -147,5 +150,5 @@
 #define KEY_SHIFT_BACKTICK       0x7E  /* ~ */
 
 #define KEY_DELETE               0x7F  /* Ignored by the VT100 */
- 
+
 #endif

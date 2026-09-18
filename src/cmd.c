@@ -2,6 +2,14 @@
 #include "editor.h"
 #include "buffer.h"
 
+void cmd_delete_character()
+{
+    u64 cursor_offset = E.cursor_offset;
+    buffer *b = E.active_buffer;
+
+    buffer_delete(b, E.cursor_offset-1, E.cursor_offset);
+}
+
 void cmd_move_cursor_right()
 {
     u64 cursor_offset = E.cursor_offset;
@@ -48,7 +56,6 @@ void cmd_move_cursor_left()
         return;
     }
 
-
     E.cursor_offset--;
 }
 
@@ -56,27 +63,36 @@ void cmd_move_cursor_down()
 {
     u64 cursor_offset = E.cursor_offset;
     buffer *b = E.active_buffer;
+    cursor_pos cursor;
+    u64 current_line_index;
+    u64 next_line_index;
+    u64 current_line_start;
+    u64 next_line_start;
+    struct line next_line_length;
+    u64 desired_column;
 
-    cursor_pos cursor = buffer_offset_to_screen_pos(b, cursor_offset);
+    cursor = buffer_offset_to_screen_pos(b, cursor_offset);
 
     /* @note: the terminal is row,col 1,1 based */
     u8 already_on_last_line = (cursor.y == b->cached_line_starts.len);
     if (already_on_last_line) return;
 
-    u64 current_line_index = cursor.y - 1;
-    u64 next_line_index = current_line_index + 1;
+    current_line_index = cursor.y - 1;
+    next_line_index = current_line_index + 1;
 
-    u64 current_line_start = b->cached_line_starts.offsets[current_line_index];
-    u64 next_line_start = b->cached_line_starts.offsets[next_line_index];
+    current_line_start = b->cached_line_starts.offsets[current_line_index];
+    next_line_start = b->cached_line_starts.offsets[next_line_index];
 
-    u64 desired_column = cursor_offset - current_line_start;
+    next_line_length = buffer_line_length(b, next_line_start);
 
-    u64 next_line_end = current_line_start + 1;
-    u64 next_line_length = next_line_end - next_line_start;
-
-    if (desired_column > next_line_length)
+    desired_column = cursor_offset - current_line_start;
+    if (desired_column > next_line_length.len)
     {
-        desired_column = next_line_length;
+        desired_column = next_line_length.len;
+    }
+    if (desired_column > 0 && desired_column == next_line_length.len)
+    {
+        desired_column--;
     }
 
     E.cursor_offset = next_line_start + desired_column;

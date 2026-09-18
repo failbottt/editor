@@ -18,13 +18,37 @@
 /* dynamic so it has no length */
 #define CURSOR_SET_POS "\x1b[%d;%dH"
 
+/* it's a space after the 6 */
+#define CURSOR_AS_LINE "\x1b[6 q"
+#define CURSOR_AS_LINE_LEN 5
+
+/* it's a space after the 6 */
+#define CURSOR_AS_BLOCK "\x1b[2 q"
+#define CURSOR_AS_BLOCK_LEN 5
+
 #define ENTER_ATL_SCREEN "\x1b[?1049h"
 #define ENTER_ATL_SCREEN_LEN 8
 
 #define LEAVE_ATL_SCREEN "\x1b[?1049l"
 #define LEAVE_ATL_SCREEN_LEN 8
 
+void term_cursor_as_block()
+{
+    write(
+            STDOUT_FILENO,
+            CURSOR_AS_BLOCK,
+            CURSOR_AS_BLOCK_LEN
+         );
+}
 
+void term_cursor_as_line()
+{
+    write(
+            STDOUT_FILENO,
+            CURSOR_AS_LINE,
+            CURSOR_AS_LINE_LEN
+         );
+}
 
 void term_clear_screen()
 {

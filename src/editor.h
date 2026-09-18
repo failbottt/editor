@@ -12,6 +12,7 @@ typedef enum
     EMPTY = 0,
     NORMAL,
     INSERT,
+    INSERT_RIGHT_OF_CURSOR,
     VISUAL,
 } editor_mode;
 

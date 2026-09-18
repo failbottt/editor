@@ -19,7 +19,7 @@ void editor_process_input(key k)
         }
         editor_process_normal_mode_key(k);
     }
-    else if (E.mode == INSERT)
+    else if (E.mode == INSERT || E.mode == INSERT_RIGHT_OF_CURSOR)
     {
         editor_process_insert_mode_key(k);
     }
@@ -60,11 +60,22 @@ void editor_process_normal_mode_key(key k)
             cmd_move_cursor_up();
             break;
         }
+        case KEY_A_LOWER:
+        {
+            E.mode = INSERT_RIGHT_OF_CURSOR;
+            E.cursor_offset++;
+            break;
+        }
+        default:
+        {
+            break;
+        }
     }
 }
 
 void editor_process_insert_mode_key(key k)
 {
+    /* @cleanup: probably init a buffer the editor was opened without a file */
     if (E.active_buffer == NULL)
     {
         return;
@@ -72,17 +83,41 @@ void editor_process_insert_mode_key(key k)
 
     if (k.value == KEY_ESCAPE)
     {
+        if (E.mode == INSERT_RIGHT_OF_CURSOR)
+        {
+            E.cursor_offset--;
+        }
         E.mode = NORMAL;
         return;
     }
 
-    u8 b2[128];
-    sprintf((char *)b2, "%c", k.value);
+    switch (k.value)
+    {
+        case KEY_DELETE:
+        case KEY_BACKSPACE:
+        {
+            cmd_delete_character();
+            cmd_move_cursor_left();
+            return;
+        }
+        default:
+        {
+            u8 b2[128];
+            sprintf((char *)b2, "%c", k.value);
 
-    string s_tmp = {.data = b2, .len = 1};
-    buffer_insert(E.active_buffer, E.cursor_offset, s_tmp);
+            string s_tmp = {.data = b2, .len = 1};
+            buffer_insert(E.active_buffer, E.cursor_offset, s_tmp);
 
-    E.cursor_offset++;
+            if (E.mode == INSERT_RIGHT_OF_CURSOR)
+            {
+                E.cursor_offset++;
+            }
+            else
+            {
+                cmd_move_cursor_right();
+            }
+        }
+    }
 }
 
 void editor_process_visual_mode_key(key k)

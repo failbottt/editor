@@ -6,11 +6,6 @@
 #include "gfx.h"
 #include "input.h"
 
-struct foo
-{
-    int x;
-};
-
 static void test_cursor_and_input()
 {
     gfx_init();
@@ -45,8 +40,9 @@ int main()
 {
     /* test_cursor_and_input(); */
 
-    struct foo foo = {0};
+    buffer b = buffer_init(STR("/path/to/file"), STR("foo bar"));
+
+    fprintf(stdout, "%c\n", buffer_char_at_offset(&b, 2));
 
     return 0;
 }
-

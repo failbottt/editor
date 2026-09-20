@@ -69,5 +69,6 @@ void buffer_delete(buffer *b, u64 start, u64 end);
 cursor_pos buffer_offset_to_screen_pos(buffer *b, u64 offset);
 u64 buffer_document_length(buffer *b);
 struct line buffer_line_length(buffer *b, u64 offset);
+u8 buffer_char_at_offset(buffer *b, u64 offset);
 
 #endif

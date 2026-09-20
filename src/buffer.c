@@ -7,6 +7,8 @@
 #include "buffer.h"
 #include "editor.h"
 
+
+
 static u8 *buffer_source(buffer *b, piece *p)
 {
     u8 *r = (u8 *)"";
@@ -608,4 +610,32 @@ cursor_pos buffer_offset_to_screen_pos(buffer *b, u64 offset)
 
 
     return(cursor);
+}
+
+u8 buffer_char_at_offset(buffer *b, u64 offset)
+{
+    piece_list *list = b->list;
+
+    u64 search_index = 0;
+
+    u64 i;
+    for (i = 0; i < list->len; i++)
+    {
+        piece p = list->pieces[i];
+
+        u8 *data = buffer_source(b, &p);
+
+        int j;
+        for (j = 0; j < p.len; j++)
+        {
+            if (search_index == offset)
+            {
+                return data[j];
+            }
+
+            search_index++;
+        }
+    }
+
+    return(0);
 }

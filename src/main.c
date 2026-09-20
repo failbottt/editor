@@ -19,7 +19,7 @@ int main(int argc, char **argv)
 
     string p = {.data = (u8*)"foo/bar.txt", .len = 11};
 
-    u8 *d = (u8*)"foo1barbaz\nfoo2hello\no3\nfoo4-----------------";
+    u8 *d = (u8*)"\tfoo1barbaz\n\tfoo2hello\no3\nfoo4-----------------";
     string code = {.data = d, .len = strlen(d)};
 
     buffer b = buffer_init(p, code);

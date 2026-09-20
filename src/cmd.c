@@ -2,6 +2,37 @@
 #include "editor.h"
 #include "buffer.h"
 
+void cmd_move_cursor_to_first_char_on_line()
+{
+    u64 cursor_offset = E.cursor_offset;
+    buffer *b = E.active_buffer;
+
+    cursor_pos cursor = buffer_offset_to_screen_pos(b, cursor_offset);
+
+    u64 y = cursor.y - 1;
+    u64 x = cursor.x - 1;
+
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+
+    u64 current_line_start = b->cached_line_starts.offsets[y];
+    u64 next_line_start = b->cached_line_starts.offsets[y + 1];
+
+    u64 i = current_line_start;
+    while (i < next_line_start)
+    {
+        u8 c = buffer_char_at_offset(b, i);
+        if (c != '\n' && c != '\t' && c != ' ')
+        {
+            break;
+        }
+
+        i++;
+    }
+
+    E.cursor_offset = i;
+}
+
 void cmd_move_cursor_to_end_of_line()
 {
     u64 cursor_offset = E.cursor_offset;

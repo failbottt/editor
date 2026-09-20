@@ -35,11 +35,6 @@ void editor_process_normal_mode_key(key k)
 {
     switch(k.value)
     {
-        case KEY_I_LOWER:
-            {
-                E.mode = INSERT;
-                break;
-            }
         case KEY_L_LOWER:
             {
                 cmd_move_cursor_right();
@@ -58,6 +53,17 @@ void editor_process_normal_mode_key(key k)
         case KEY_K_LOWER:
             {
                 cmd_move_cursor_up();
+                break;
+            }
+        case KEY_I_LOWER:
+            {
+                E.mode = INSERT;
+                break;
+            }
+        case KEY_I_UPPER:
+            {
+                E.mode = INSERT;
+                cmd_move_cursor_to_first_char_on_line();
                 break;
             }
         case KEY_A_LOWER:

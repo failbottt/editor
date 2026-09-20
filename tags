@@ -105,6 +105,10 @@ CTRL_W	src/keydefs.h	/^#define CTRL_W /;"	d
 CTRL_X	src/keydefs.h	/^#define CTRL_X /;"	d
 CTRL_Y	src/keydefs.h	/^#define CTRL_Y /;"	d
 CTRL_Z	src/keydefs.h	/^#define CTRL_Z /;"	d
+CURSOR_AS_BLOCK	src/term.c	/^#define CURSOR_AS_BLOCK /;"	d	file:
+CURSOR_AS_BLOCK_LEN	src/term.c	/^#define CURSOR_AS_BLOCK_LEN /;"	d	file:
+CURSOR_AS_LINE	src/term.c	/^#define CURSOR_AS_LINE /;"	d	file:
+CURSOR_AS_LINE_LEN	src/term.c	/^#define CURSOR_AS_LINE_LEN /;"	d	file:
 CURSOR_HIDE	src/term.c	/^#define CURSOR_HIDE /;"	d	file:
 CURSOR_HIDE_LEN	src/term.c	/^#define CURSOR_HIDE_LEN /;"	d	file:
 CURSOR_SET_POS	src/term.c	/^#define CURSOR_SET_POS /;"	d	file:
@@ -122,6 +126,7 @@ GB	src/base.h	/^#define GB(/;"	d
 GFX_H	src/gfx.h	/^#define GFX_H$/;"	d
 INPUT_H	src/input.h	/^#define INPUT_H$/;"	d
 INSERT	src/editor.h	/^    INSERT,$/;"	e	enum:__anonf14592f90103
+INSERT_RIGHT_OF_CURSOR	src/editor.h	/^    INSERT_RIGHT_OF_CURSOR,$/;"	e	enum:__anonf14592f90103
 KB	src/base.h	/^#define KB(/;"	d
 KEYDEFS_H	src/keydefs.h	/^#define KEYDEFS_H$/;"	d
 KEY_0	src/keydefs.h	/^#define KEY_0 /;"	d
@@ -267,13 +272,15 @@ buffer_line_length	src/buffer.c	/^struct line buffer_line_length(buffer *b, u64 
 buffer_offset_to_screen_pos	src/buffer.c	/^cursor_pos buffer_offset_to_screen_pos(buffer *b, u64 offset)$/;"	f	typeref:typename:cursor_pos
 buffer_source	src/buffer.c	/^static u8 *buffer_source(buffer *b, piece *p)$/;"	f	typeref:typename:u8 *	file:
 buffers	src/editor.h	/^    buffer *buffers;$/;"	m	struct:__anonf14592f90208	typeref:typename:buffer *
-cached_line_endings	src/buffer.h	/^    line_cache cached_line_endings;$/;"	m	struct:buffer	typeref:typename:line_cache
+cached_line_starts	src/buffer.h	/^    line_cache cached_line_starts;$/;"	m	struct:buffer	typeref:typename:line_cache
 capacity	src/base.h	/^    u64 capacity;$/;"	m	struct:__anon50f3780d0308	typeref:typename:u64
 capacity	src/buffer.h	/^    u64 capacity;$/;"	m	struct:__anon411bd06c0308	typeref:typename:u64
 capacity	src/buffer.h	/^    u64 capacity;$/;"	m	struct:__anon411bd06c0408	typeref:typename:u64
+cmd_delete_character	src/cmd.c	/^void cmd_delete_character()$/;"	f	typeref:typename:void
 cmd_move_cursor_down	src/cmd.c	/^void cmd_move_cursor_down()$/;"	f	typeref:typename:void
 cmd_move_cursor_left	src/cmd.c	/^void cmd_move_cursor_left()$/;"	f	typeref:typename:void
 cmd_move_cursor_right	src/cmd.c	/^void cmd_move_cursor_right()$/;"	f	typeref:typename:void
+cmd_move_cursor_to_end_of_line	src/cmd.c	/^void cmd_move_cursor_to_end_of_line()$/;"	f	typeref:typename:void
 cmd_move_cursor_up	src/cmd.c	/^void cmd_move_cursor_up()$/;"	f	typeref:typename:void
 cursor_offset	src/editor.h	/^    u64 cursor_offset;$/;"	m	struct:__anonf14592f90208	typeref:typename:u64
 cursor_offset	src/view.h	/^    u64 cursor_offset;$/;"	m	struct:view	typeref:typename:u64
@@ -343,6 +350,8 @@ start	src/buffer.h	/^    u64 start;$/;"	m	struct:__anon411bd06c0208	typeref:type
 start	src/buffer.h	/^    u64 start;$/;"	m	struct:line	typeref:typename:u64
 string	src/base.h	/^} string;$/;"	t	typeref:struct:__anon50f3780d0208
 term_clear_screen	src/term.c	/^void term_clear_screen()$/;"	f	typeref:typename:void
+term_cursor_as_block	src/term.c	/^void term_cursor_as_block()$/;"	f	typeref:typename:void
+term_cursor_as_line	src/term.c	/^void term_cursor_as_line()$/;"	f	typeref:typename:void
 term_cursor_to_home	src/term.c	/^void term_cursor_to_home()$/;"	f	typeref:typename:void
 term_enter_alt_screen	src/term.c	/^void term_enter_alt_screen()$/;"	f	typeref:typename:void
 term_hide_cursor	src/term.c	/^void term_hide_cursor()$/;"	f	typeref:typename:void

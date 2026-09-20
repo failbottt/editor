@@ -39,12 +39,24 @@ if [[ -n "${TMUX-}" ]]; then
             -c "$PWD" \
             bash "${gdbserver_launcher}" "$@"
     )"
-    tmux split-window -v -t "${gdbserver_pane}" -c "$PWD" \
-        nvim ./src/main.c >/dev/null
+    code_pane="$(
+        tmux split-window -v -t "${gdbserver_pane}" -P -F '#{pane_id}' \
+            -c "$PWD" \
+            nvim ./src/main.c
+    )"
     sleep 0.5
 fi
 
-exec gdb -q \
+set +e
+gdb -q \
     -ex 'set debuginfod enabled off' \
     -ex 'target remote 127.0.0.1:2345' \
     ./build/editor
+status=$?
+set -e
+
+if [[ -n "${code_pane-}" ]]; then
+    tmux kill-pane -t "${code_pane}" 2>/dev/null || true
+fi
+
+exit "${status}"

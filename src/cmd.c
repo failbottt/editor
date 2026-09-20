@@ -2,6 +2,35 @@
 #include "editor.h"
 #include "buffer.h"
 
+void cmd_move_cursor_to_end_of_line()
+{
+    u64 cursor_offset = E.cursor_offset;
+    buffer *b = E.active_buffer;
+
+    u64 doc_len = buffer_document_length(b);
+
+    cursor_pos cursor = buffer_offset_to_screen_pos(b, cursor_offset);
+
+    u64 y = cursor.y - 1;
+    u64 x = cursor.x - 1;
+
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+    if (y >= doc_len) y = doc_len - 1;
+
+    u8 on_last_line = (y == b->cached_line_starts.len - 1);
+    if (on_last_line)
+    {
+        E.cursor_offset = doc_len - 1;
+        return;
+    }
+
+    u64 current_line_start = b->cached_line_starts.offsets[y];
+    u64 next_line_start = b->cached_line_starts.offsets[y+1];
+
+    E.cursor_offset = next_line_start - 2;
+}
+
 void cmd_delete_character()
 {
     u64 cursor_offset = E.cursor_offset;

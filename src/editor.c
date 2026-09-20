@@ -98,12 +98,11 @@ void editor_process_insert_mode_key(key k)
     {
         case KEY_ESCAPE:
             {
-                if (E.mode == INSERT_RIGHT_OF_CURSOR)
+                if (E.mode == INSERT_RIGHT_OF_CURSOR || E.mode == INSERT)
                 {
                     /*
-                     * @note: it inserts to the right of the cursor, but
-                     * when pressing escape the cursor should go back to
-                     * the left. That's how vim handles it.
+                     * @note: when pressing escape the cursor
+                     * should go back to the left. That's how vim handles it.
                      */
                     E.cursor_offset--;
                 }
@@ -114,7 +113,6 @@ void editor_process_insert_mode_key(key k)
         case KEY_BACKSPACE:
             {
                 cmd_delete_character();
-                cmd_move_cursor_left();
                 return;
             }
         default:

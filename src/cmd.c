@@ -22,7 +22,7 @@ void cmd_move_cursor_to_first_char_on_line()
     while (i < next_line_start)
     {
         u8 c = buffer_char_at_offset(b, i);
-        if (c != '\n' && c != '\t' && c != ' ')
+        if (c != '\n' && c != '\r' && c != '\t' && c != ' ')
         {
             break;
         }
@@ -68,6 +68,13 @@ void cmd_delete_character()
     buffer *b = E.active_buffer;
 
     buffer_delete(b, E.cursor_offset-1, E.cursor_offset);
+
+    if (E.cursor_offset == 0)
+    {
+        return;
+    }
+
+    E.cursor_offset--;
 }
 
 void cmd_move_cursor_right()

@@ -79,10 +79,18 @@ void editor_process_normal_mode_key(key k)
                 E.cursor_offset++;
                 break;
             }
+        case KEY_O_LOWER:
+            {
+                E.mode = INSERT;
+                cmd_insert_new_line_below_cursor();
+
+                break;
+            }
         default:
             {
                 break;
             }
+
     }
 }
 
@@ -122,15 +130,7 @@ void editor_process_insert_mode_key(key k)
 
                 string s_tmp = {.data = b2, .len = 1};
                 buffer_insert(E.active_buffer, E.cursor_offset, s_tmp);
-
-                if (E.mode == INSERT_RIGHT_OF_CURSOR)
-                {
-                    E.cursor_offset++;
-                }
-                else
-                {
-                    cmd_move_cursor_right();
-                }
+                E.cursor_offset++;
             }
     }
 }

@@ -2,6 +2,66 @@
 #include "editor.h"
 #include "buffer.h"
 
+#define NOT_WHITESPACE(c) (c != '\n' && c != '\r' && c != '\t' && c != ' ')
+#define WHITESPACE(c) (c == '\n' && c == '\r' && c == '\t' && c == ' ')
+
+void cmd_insert_new_line_below_cursor()
+{
+    u64 cursor_offset = E.cursor_offset;
+    buffer *b = E.active_buffer;
+    u64 doc_len;
+    u64 line_index;
+    u64 current_line_start;
+    u64 insert_at;
+    u64 indent_len = 0;
+    u64 i;
+
+    if (b == NULL || b->cached_line_starts.len == 0)
+    {
+        return;
+    }
+
+    doc_len = buffer_document_length(b);
+    if (cursor_offset > doc_len)
+    {
+        cursor_offset = doc_len;
+    }
+
+    cursor_pos cursor = buffer_offset_to_screen_pos(b, cursor_offset);
+
+    line_index = cursor.y - 1;
+    current_line_start = b->cached_line_starts.offsets[line_index];
+    if (line_index + 1 < b->cached_line_starts.len)
+    {
+        insert_at = b->cached_line_starts.offsets[line_index + 1] - 1;
+    }
+    else
+    {
+        insert_at = doc_len;
+    }
+
+    for (i = current_line_start; i < insert_at; i++)
+    {
+        u8 c = buffer_char_at_offset(b, i);
+        if (c != ' ' && c != '\t')
+        {
+            break;
+        }
+        indent_len++;
+    }
+
+    buffer_insert(b, insert_at, STR("\n"));
+    E.cursor_offset = insert_at + 1;
+
+    for (i = 0; i < indent_len; i++)
+    {
+        u8 c = buffer_char_at_offset(b, current_line_start + i);
+        string s = {.data = &c, .len = 1};
+        buffer_insert(b, E.cursor_offset, s);
+        E.cursor_offset++;
+    }
+}
+
 void cmd_move_cursor_to_first_char_on_line()
 {
     u64 cursor_offset = E.cursor_offset;
@@ -22,7 +82,7 @@ void cmd_move_cursor_to_first_char_on_line()
     while (i < next_line_start)
     {
         u8 c = buffer_char_at_offset(b, i);
-        if (c != '\n' && c != '\r' && c != '\t' && c != ' ')
+        if (NOT_WHITESPACE(c))
         {
             break;
         }
@@ -100,7 +160,6 @@ void cmd_move_cursor_right()
     {
         u64 start = b->cached_line_starts.offsets[i];
 
-        /* @fix: the +2 is likely a mistake */
         u8 next_char_is_end_of_line = ((cursor_offset+2) == start);
         if (next_char_is_end_of_line)
         {
